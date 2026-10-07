@@ -89,4 +89,4 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 ./scripts/demo_core.sh
 ```
 
-开发过程见 `docs/DEVELOPMENT_LOG.md`。
+开发过程按日期记录在 `docs/journal/YYYY-MM-DD.md`；`docs/DEVELOPMENT_LOG.md` 只保留阶段摘要。每天必须记录实际过程、验证结果、失败、问题定位与修复，不把“代码已写”混同为“已验证通过”。
