@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import math
+import os
 import time
 
 import rclpy
@@ -20,6 +21,7 @@ class Nav2E2EProbe(Node):
         self.odom = None
         self.result = None
         self.amcl_pose = None
+        self.trajectory = []
 
         self.create_subscription(Odometry, "/odom", self._on_odom, 10)
         self.create_subscription(
@@ -39,6 +41,8 @@ class Nav2E2EProbe(Node):
 
     def _on_odom(self, msg: Odometry) -> None:
         self.odom = msg
+        p = msg.pose.pose.position
+        self.trajectory.append([float(p.x), float(p.y)])
 
     def _on_amcl_pose(self, msg: PoseWithCovarianceStamped) -> None:
         self.amcl_pose = msg
@@ -134,13 +138,23 @@ def main() -> int:
             "final_xy": [x1, y1],
             "displacement_m": displacement,
             "amcl_received": node.amcl_pose is not None,
+            "trajectory_samples": len(node.trajectory),
+            "trajectory": node.trajectory,
             "passed": (
                 bool(result.success)
                 and result.code == "NAV2_SUCCEEDED"
                 and displacement > 0.5
             ),
         }
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+
+        report_path = os.environ.get("HOMEAGENT_NAV2_REPORT")
+        if report_path:
+            with open(report_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, ensure_ascii=False, indent=2)
+
+        console_report = dict(report)
+        console_report.pop("trajectory", None)
+        print(json.dumps(console_report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 2
     finally:
         node.destroy_node()

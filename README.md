@@ -78,7 +78,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 9 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context 单元测试 17/17 通过。Gazebo/SLAM/Nav2 运行时依赖正在隔离 Docker 环境中验证。
+当前 workspace 已有 9 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context 单元测试 17/17 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox 建图、地图保存和 Nav2 真实导航均已在隔离 Docker 环境中端到端验证通过。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -87,6 +87,12 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 ```bash
 ./scripts/build_and_test.sh
 ./scripts/demo_core.sh
+
+# 完整移动机器人 Demo：
+# “去客厅” -> Context -> Safety -> Nav2 -> Gazebo 真移动 -> 轨迹图
+./scripts/demo_nav2.sh
 ```
+
+`demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；运行产物默认被 Git 忽略。
 
 开发过程按日期记录在 `docs/journal/YYYY-MM-DD.md`；`docs/DEVELOPMENT_LOG.md` 只保留阶段摘要。每天必须记录实际过程、验证结果、失败、问题定位与修复，不把“代码已写”混同为“已验证通过”。

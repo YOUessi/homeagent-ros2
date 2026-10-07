@@ -9,6 +9,7 @@ docker run --rm \
   --network host \
   --ipc host \
   -e ROS_DOMAIN_ID=47 \
+  -e HOMEAGENT_NAV2_REPORT=/workspace/artifacts/nav2_demo_report.json \
   -v "$ROOT:/workspace" \
   homeagent-ros2:humble \
   -lc '

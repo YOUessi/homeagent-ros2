@@ -138,3 +138,18 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - workspace package 数：9。
 - `colcon build`：9/9 成功。
 - 单元测试：17/17 passed。
+
+## 2026-10-07 — Phase 0.8–1.0: Gazebo / SLAM / Nav2 真运行 + Demo
+
+### 已验证
+- Gazebo HomeBot headless runtime 通过：360/360 LiDAR samples 有效，`/cmd_vel` 产生约 0.41m 实际位移。
+- SLAM Toolbox 真实建图通过：约 120×120 cells，0.05m resolution。
+- 第一张 `home_room.pgm/.yaml` occupancy map 已由实际 SLAM 保存。
+- Nav2 map_server / AMCL / planner / controller / bt_navigator 全部 active。
+- 修复 wall-time / sim-time 混用与 AMCL TF stale 后，“去客厅”完整链真实导航通过：实际位移约 0.65m，`NAV2_SUCCEEDED` 且 E2E `passed=true`。
+- 新增 `scripts/demo_nav2.sh`：自动展示 Planner → Trusted Context → Safety → Nav2 → robot motion，并生成真实轨迹可视化。
+
+### 关键问题
+- Docker CMake cache 路径污染、编译器缺失、Gazebo 外部 model database 卡 spawn、Nav2 launch bool、AMCL stale TF 均已保留在当天详细日志并记录修复与验证。
+
+详细过程：`docs/journal/2026-10-07.md`。

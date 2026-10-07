@@ -31,8 +31,9 @@ amcl:
     sigma_hit: 0.2
     tf_broadcast: true
     transform_tolerance: 1.0
-    update_min_a: 0.2
-    update_min_d: 0.25
+    # Keep map->odom fresh even while the robot is initially stationary.
+    update_min_a: 0.0
+    update_min_d: 0.0
     z_hit: 0.5
     z_max: 0.05
     z_rand: 0.5
