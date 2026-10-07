@@ -28,7 +28,7 @@ Agent 不接触低层速度/关节命令，只能调用高层技能：
 - `speak(text)`
 - `stop()`
 
-当前 `homeagent_skills` 使用 mock adapter。后续保持相同接口替换为 Nav2 / MoveIt2 / perception adapter。
+当前 `homeagent_skills` 已同时提供 deterministic mock adapter 与真实 Nav2 adapter。导航语义目标不再由 skill 内部硬编码：`Trusted Context Resolver` 先从 `homeagent_memory` 的 `place` 实体解析可信 `map_pose`，Safety 校验后 Nav2 adapter 只执行该可信 pose。MoveIt2 / perception adapter 后续保持相同 contract 接入。
 
 ### D. 主脑调度层
 - task planner
@@ -103,7 +103,8 @@ Agent -> ActionCandidate (untrusted)
     |
     v
 Trusted Context Resolver <- household memory / policy
-    |
+    |                    |
+    | navigate(target)   +--> place(target).map_pose
     v
 ActionProposal + trusted context
     |

@@ -53,6 +53,17 @@ def evaluate_action(proposal: Dict[str, Any]) -> Decision:
         forbidden = context.get("forbidden_zones") or []
         if target in forbidden:
             return _reject("FORBIDDEN_ZONE", f"target zone '{target}' is forbidden")
+        if context.get("safety_context_trusted") is not True:
+            return _reject(
+                "UNTRUSTED_NAVIGATION_CONTEXT",
+                "navigate requires a trusted memory-backed target pose",
+            )
+        pose = context.get("resolved_target_pose")
+        if not isinstance(pose, list) or len(pose) != 3:
+            return _reject(
+                "INVALID_NAVIGATION_CONTEXT",
+                "navigate requires resolved_target_pose=[x,y,yaw]",
+            )
 
     if action in {"pick", "handover", "place"}:
         obj = params.get("object")

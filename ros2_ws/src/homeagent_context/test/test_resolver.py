@@ -1,14 +1,49 @@
 from homeagent_context.resolver import resolve_trusted_context
 
 
-def test_navigation_context_comes_from_policy():
+def test_navigation_pose_comes_from_place_memory():
     context = resolve_trusted_context(
         action="navigate",
         params={"target": "living_room"},
+        place_record={
+            "entity_id": "place-living-room",
+            "name": "living_room",
+            "payload": {"map_pose": {"x": 0.8, "y": 0.0, "yaw": 0.0}},
+            "confidence": 1.0,
+        },
         forbidden_zones=["utility_room"],
     )
     assert context["safety_context_trusted"]
     assert context["forbidden_zones"] == ["utility_room"]
+    assert context["resolved_target_pose"] == [0.8, 0.0, 0.0]
+    assert context["place_id"] == "place-living-room"
+
+
+def test_navigation_unknown_place_is_untrusted():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "garage"},
+        place_record=None,
+        forbidden_zones=["utility_room"],
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "PLACE_NOT_IN_MEMORY"
+    assert context["forbidden_zones"] == ["utility_room"]
+
+
+def test_navigation_invalid_place_pose_is_untrusted():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "living_room"},
+        place_record={
+            "entity_id": "bad-place",
+            "name": "living_room",
+            "payload": {"map_pose": {"x": "bad", "y": 0.0, "yaw": 0.0}},
+            "confidence": 1.0,
+        },
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "PLACE_POSE_INVALID"
 
 
 def test_pick_unknown_object_is_untrusted():

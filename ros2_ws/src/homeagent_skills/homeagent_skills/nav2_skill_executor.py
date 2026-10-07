@@ -1,6 +1,5 @@
 import json
 import math
-from typing import Dict, Tuple
 
 import rclpy
 from geometry_msgs.msg import PoseStamped
@@ -10,17 +9,12 @@ from rclpy.node import Node
 
 from homeagent_interfaces.msg import SafetyDecision, SkillResult
 
+from .navigation_target import trusted_navigation_pose
 
-DEFAULT_TARGETS: Dict[str, Tuple[float, float, float]] = {
-    "living_room": (0.80, 0.00, 0.0),
-    "kitchen": (1.75, -1.35, 0.0),
-    "bedroom": (-1.75, -1.35, 0.0),
-    "hallway": (0.0, 0.0, 0.0),
-}
 
 
 class Nav2SkillExecutor(Node):
-    """Execute approved navigation actions through Nav2 only."""
+    """Execute only Safety-approved, memory-resolved navigation actions."""
 
     def __init__(self) -> None:
         super().__init__("homeagent_nav2_skill_executor")
@@ -58,27 +52,13 @@ class Nav2SkillExecutor(Node):
 
         try:
             proposal = json.loads(decision.proposal_json or "{}")
-            params = proposal.get("params") or {}
-            target = params["target"]
-        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+            target, pose = trusted_navigation_pose(proposal)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
             self._publish_result(
                 decision,
                 success=False,
-                code="INVALID_NAVIGATION_PROPOSAL",
+                code="INVALID_TRUSTED_NAVIGATION_CONTEXT",
                 result={"error": str(exc)},
-            )
-            return
-
-        pose = DEFAULT_TARGETS.get(target)
-        if pose is None:
-            self._publish_result(
-                decision,
-                success=False,
-                code="UNKNOWN_SEMANTIC_TARGET",
-                result={
-                    "target": target,
-                    "known_targets": sorted(DEFAULT_TARGETS),
-                },
             )
             return
 
@@ -105,7 +85,8 @@ class Nav2SkillExecutor(Node):
             self._on_goal_response(request_id, future)
         )
         self.get_logger().info(
-            f"NAV2_SEND request_id={decision.request_id} target={target}"
+            f"NAV2_SEND request_id={decision.request_id} target={target} "
+            f"pose={list(pose)} source=trusted_memory"
         )
 
     def _on_goal_response(self, request_id, future) -> None:
@@ -168,6 +149,7 @@ class Nav2SkillExecutor(Node):
             result={
                 "target": state["target"],
                 "goal_xyyaw": list(state["pose"]),
+                "target_source": "trusted_memory",
                 "status": status,
             },
         )

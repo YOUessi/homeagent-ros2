@@ -44,11 +44,15 @@ docker run --rm \
     trap cleanup EXIT INT TERM
 
     sleep 12
+    python3 /workspace/scripts/seed_home_memory.py >/tmp/homeagent_seed.log
+
     set +e
     python3 /workspace/scripts/nav2_e2e_smoke.py --ros-args -p use_sim_time:=true
     RC=$?
     set -e
 
+    echo "=== Seeded household memory ==="
+    cat /tmp/homeagent_seed.log
     echo "=== HomeAgent core log tail ==="
     tail -100 /tmp/homeagent_core_nav2.log
     echo "=== Nav2 stack log tail ==="

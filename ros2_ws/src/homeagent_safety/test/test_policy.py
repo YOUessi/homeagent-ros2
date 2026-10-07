@@ -6,14 +6,18 @@ def test_safe_navigation_is_allowed():
         {
             "action": "navigate",
             "params": {"target": "living_room"},
-            "context": {"forbidden_zones": ["garage"]},
+            "context": {
+                "forbidden_zones": ["garage"],
+                "safety_context_trusted": True,
+                "resolved_target_pose": [0.8, 0.0, 0.0],
+            },
         }
     )
     assert decision.allowed
     assert decision.code == "ALLOW"
 
 
-def test_forbidden_zone_is_rejected():
+def test_forbidden_zone_is_rejected_before_execution():
     decision = evaluate_action(
         {
             "action": "navigate",
@@ -23,6 +27,37 @@ def test_forbidden_zone_is_rejected():
     )
     assert not decision.allowed
     assert decision.code == "FORBIDDEN_ZONE"
+
+
+def test_navigation_requires_trusted_place_memory():
+    decision = evaluate_action(
+        {
+            "action": "navigate",
+            "params": {"target": "unknown_room"},
+            "context": {
+                "safety_context_trusted": False,
+                "context_error": "PLACE_NOT_IN_MEMORY",
+                "forbidden_zones": [],
+            },
+        }
+    )
+    assert not decision.allowed
+    assert decision.code == "UNTRUSTED_NAVIGATION_CONTEXT"
+
+
+def test_navigation_requires_resolved_pose():
+    decision = evaluate_action(
+        {
+            "action": "navigate",
+            "params": {"target": "living_room"},
+            "context": {
+                "safety_context_trusted": True,
+                "forbidden_zones": [],
+            },
+        }
+    )
+    assert not decision.allowed
+    assert decision.code == "INVALID_NAVIGATION_CONTEXT"
 
 
 def test_sharp_object_to_minor_is_rejected():

@@ -50,6 +50,10 @@ class TrustedContextNode(Node):
             )
             return
 
+        if msg.action == "navigate":
+            self._resolve_navigation(msg, params)
+            return
+
         if msg.action not in MANIPULATION_ACTIONS:
             context = resolve_trusted_context(
                 action=msg.action,
@@ -59,9 +63,7 @@ class TrustedContextNode(Node):
             self._publish_with_context(msg, context)
             return
 
-        if not self._memory.service_is_ready():
-            self._memory.wait_for_service(timeout_sec=0.1)
-        if not self._memory.service_is_ready():
+        if not self._ensure_memory_ready():
             self._publish_untrusted(msg, "MEMORY_SERVICE_UNAVAILABLE")
             return
 
@@ -79,6 +81,68 @@ class TrustedContextNode(Node):
             lambda done, candidate=msg, parsed=params:
             self._on_object(candidate, parsed, done)
         )
+
+    def _resolve_navigation(self, msg: ActionProposal, params: dict) -> None:
+        target = params.get("target", "")
+        if not target:
+            self._publish_with_context(
+                msg,
+                {
+                    "safety_context_trusted": False,
+                    "context_source": "trusted_world_state",
+                    "context_error": "MISSING_TARGET",
+                    "forbidden_zones": self._forbidden_zones,
+                },
+            )
+            return
+
+        if not self._ensure_memory_ready():
+            self._publish_with_context(
+                msg,
+                {
+                    "safety_context_trusted": False,
+                    "context_source": "trusted_world_state",
+                    "context_error": "MEMORY_SERVICE_UNAVAILABLE",
+                    "forbidden_zones": self._forbidden_zones,
+                },
+            )
+            return
+
+        request = MemoryQuery.Request()
+        request.entity_type = "place"
+        request.entity_id = ""
+        request.name = str(target)
+        future = self._memory.call_async(request)
+        future.add_done_callback(
+            lambda done, candidate=msg, parsed=params:
+            self._on_place(candidate, parsed, done)
+        )
+
+    def _on_place(self, msg: ActionProposal, params: dict, future) -> None:
+        try:
+            response = future.result()
+            place_record = (
+                json.loads(response.record_json) if response.found else None
+            )
+        except Exception as exc:
+            self._publish_with_context(
+                msg,
+                {
+                    "safety_context_trusted": False,
+                    "context_source": "trusted_world_state",
+                    "context_error": f"PLACE_QUERY_FAILED: {exc}",
+                    "forbidden_zones": self._forbidden_zones,
+                },
+            )
+            return
+
+        context = resolve_trusted_context(
+            action=msg.action,
+            params=params,
+            place_record=place_record,
+            forbidden_zones=self._forbidden_zones,
+        )
+        self._publish_with_context(msg, context)
 
     def _on_object(self, msg: ActionProposal, params: dict, future) -> None:
         try:
@@ -139,6 +203,11 @@ class TrustedContextNode(Node):
             forbidden_zones=self._forbidden_zones,
         )
         self._publish_with_context(msg, context)
+
+    def _ensure_memory_ready(self) -> bool:
+        if not self._memory.service_is_ready():
+            self._memory.wait_for_service(timeout_sec=0.1)
+        return self._memory.service_is_ready()
 
     def _publish_untrusted(self, msg: ActionProposal, error: str) -> None:
         self._publish_with_context(
