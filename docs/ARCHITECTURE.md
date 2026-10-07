@@ -28,7 +28,7 @@ Agent 不接触低层速度/关节命令，只能调用高层技能：
 - `speak(text)`
 - `stop()`
 
-当前 `homeagent_skills` 已同时提供 deterministic mock adapter 与真实 Nav2 adapter。导航语义目标不再由 skill 内部硬编码：`Trusted Context Resolver` 先从 `homeagent_memory` 的 `place` 实体解析可信 `map_pose`，Safety 校验后 Nav2 adapter 只执行该可信 pose。MoveIt2 / perception adapter 后续保持相同 contract 接入。
+当前 `homeagent_skills` 已提供 deterministic mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。导航语义目标不再由 skill 内部硬编码：`Trusted Context Resolver` 先从 `homeagent_memory` 的 `place` 实体解析可信 `map_pose`，Safety 校验后 Nav2 adapter 只执行该可信 pose。HomeArm 的 `look_at` 等机械臂动作同样只从 `action_approved` 进入 MoveIt2；具体 joint target 来自可信 skill library，而不是 Agent 输出，随后由 OMPL 规划并交给 ros2_control `homearm_controller` 执行。
 
 ### D. 主脑调度层
 - task planner

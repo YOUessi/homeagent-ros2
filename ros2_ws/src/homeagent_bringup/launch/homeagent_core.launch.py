@@ -1,17 +1,28 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
     use_nav2 = LaunchConfiguration("use_nav2")
+    use_moveit = LaunchConfiguration("use_moveit")
     use_sim_time = LaunchConfiguration("use_sim_time")
     memory_db = LaunchConfiguration("memory_db")
 
     common_params = {"use_sim_time": use_sim_time}
+
+    any_real_skill = PythonExpression(
+        [
+            "'",
+            use_nav2,
+            "'.lower() in ['true','1','yes'] or '",
+            use_moveit,
+            "'.lower() in ['true','1','yes']",
+        ]
+    )
 
     return LaunchDescription(
         [
@@ -23,7 +34,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "use_nav2",
                 default_value="false",
-                description="Use Nav2-backed navigation skill executor.",
+                description="Enable the Nav2-backed navigation skill adapter.",
+            ),
+            DeclareLaunchArgument(
+                "use_moveit",
+                default_value="false",
+                description="Enable the MoveIt2-backed HomeArm skill adapter.",
             ),
             DeclareLaunchArgument(
                 "use_sim_time",
@@ -64,18 +80,26 @@ def generate_launch_description():
             Node(
                 package="homeagent_skills",
                 executable="mock_skill_executor",
-                name="homeagent_skill_executor",
+                name="homeagent_mock_skill_executor",
                 output="screen",
                 parameters=[common_params],
-                condition=UnlessCondition(use_nav2),
+                condition=UnlessCondition(any_real_skill),
             ),
             Node(
                 package="homeagent_skills",
                 executable="nav2_skill_executor",
-                name="homeagent_skill_executor",
+                name="homeagent_nav2_skill_executor",
                 output="screen",
                 parameters=[common_params],
                 condition=IfCondition(use_nav2),
+            ),
+            Node(
+                package="homeagent_skills",
+                executable="moveit_skill_executor",
+                name="homeagent_moveit_skill_executor",
+                output="screen",
+                parameters=[common_params],
+                condition=IfCondition(use_moveit),
             ),
             Node(
                 package="homeagent_orchestrator",

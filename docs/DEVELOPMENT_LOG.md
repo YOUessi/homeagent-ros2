@@ -153,3 +153,14 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - Docker CMake cache 路径污染、编译器缺失、Gazebo 外部 model database 卡 spawn、Nav2 launch bool、AMCL stale TF 均已保留在当天详细日志并记录修复与验证。
 
 详细过程：`docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.2–1.3: HomeArm / MoveIt2
+
+- 新增 `homeagent_manipulation`：4-DOF HomeArm、SRDF、MoveIt2、ros2_control GenericSystem、JointTrajectoryController。
+- Docker runtime 已确认 `move_group`、`homearm_controller`、`joint_state_broadcaster` 正常启动并进入可执行状态。
+- MoveIt2 OMPL RRTConnect 规划并通过 `/homearm_controller/follow_joint_trajectory` 实际执行；最终 canonical smoke 最大关节误差约 0.0064 rad。
+- 新增 Safety-approved `moveit_skill_executor`。
+- “机械臂检查一下”已完成 Planner → Context → Safety → MoveIt2 → controller → SkillResult 端到端验证。
+- 当前 workspace 10 packages，24/24 unit tests。
+
+详细数据与非阻塞告警见 `docs/journal/2026-10-07.md`。

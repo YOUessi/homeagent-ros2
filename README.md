@@ -42,11 +42,12 @@ SkillResult -> Agent feedback loop
 - `homeagent_safety`：动作白名单、急停、禁区、危险物品/人员规则。
 - `homeagent_orchestrator`：主脑调度骨架、可重复 mock planner，以及 DeepSeek 高层动作规划器。
 - `homeagent_context`：把不可信 Agent candidate 与家庭档案/策略合并为可信 world-state safety context。
-- `homeagent_skills`：安全门之后的技能执行适配层；已有 mock 与真实 Nav2 adapter。Nav2 不再硬编码房间坐标，只执行 Trusted Context 从 Household Memory 解析出的可信 `map_pose`；后续增加 MoveIt2。
+- `homeagent_skills`：安全门之后的技能执行适配层；已有 mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。Nav2 只执行 Household Memory 解析出的可信 `map_pose`；MoveIt2 只消费 Safety-approved 的机械臂高层动作。
 - `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
 - `homeagent_description`：自研 HomeBot 差速底盘、LiDAR、Camera 与家庭房间 Gazebo 模型。
 - `homeagent_navigation`：SLAM Toolbox / Nav2 配置与仿真导航入口。
-- `homeagent_bringup`：核心服务一键启动与 planner 切换。
+- `homeagent_manipulation`：自研 4-DOF HomeArm、MoveIt2/OMPL、ros2_control GenericSystem 与 `homearm_controller`。
+- `homeagent_bringup`：核心服务一键启动与 planner / real-skill adapter 切换。
 
 ## 仓库结构
 
@@ -78,7 +79,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 9 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation 单元测试 24/24 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox 建图、地图保存，以及“语义房间 → Household Memory → Trusted Context → Safety → Nav2 → 真实运动”均已在隔离 Docker 环境中端到端验证通过。
+当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation 单元测试 24/24 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox、地图保存、Memory-backed Nav2 真导航，以及 HomeArm 的 MoveIt2 + ros2_control 真规划/执行均已在隔离 Docker 环境中端到端验证通过。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -91,8 +92,15 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 # 完整移动机器人 Demo：
 # “去客厅” -> Context -> Safety -> Nav2 -> Gazebo 真移动 -> 轨迹图
 ./scripts/demo_nav2.sh
+
+# HomeArm MoveIt2 standalone：OMPL -> FollowJointTrajectory -> /joint_states
+./scripts/docker_moveit_smoke.sh
+
+# HomeAgent 机械臂闭环：
+# “机械臂检查一下” -> Context -> Safety -> MoveIt2 -> ros2_control
+./scripts/docker_moveit_agent_demo.sh
 ```
 
-`demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；运行产物默认被 Git 忽略。
+`demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；所有运行产物默认被 Git 忽略。
 
 开发过程按日期记录在 `docs/journal/YYYY-MM-DD.md`；`docs/DEVELOPMENT_LOG.md` 只保留阶段摘要。每天必须记录实际过程、验证结果、失败、问题定位与修复，不把“代码已写”混同为“已验证通过”。

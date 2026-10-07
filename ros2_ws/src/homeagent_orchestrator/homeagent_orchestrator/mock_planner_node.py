@@ -67,6 +67,14 @@ class MockPlannerNode(Node):
                 {"forbidden_zones": ["utility_room"]},
             )
 
+        if "机械臂" in text or "检查姿态" in text or "检查一下" in text:
+            return self._make_proposal(
+                text,
+                "look_at",
+                {"target": "inspection_point"},
+                {},
+            )
+
         if "水杯" in text or "杯子" in text:
             return self._make_proposal(
                 text,

@@ -1,6 +1,9 @@
+from glob import glob
+import os
+
 from setuptools import find_packages, setup
 
-package_name = "homeagent_skills"
+package_name = "homeagent_manipulation"
 
 setup(
     name=package_name,
@@ -9,19 +12,14 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
+        (os.path.join("share", package_name, "launch"), glob("launch/*.py")),
+        (os.path.join("share", package_name, "config"), glob("config/*")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
     maintainer="YOUessi",
     maintainer_email="723911823@qq.com",
-    description="High-level robot skill execution adapters for HomeAgent.",
+    description="MoveIt2 and ros2_control simulation stack for the HomeAgent HomeArm.",
     license="Apache-2.0",
     tests_require=["pytest"],
-    entry_points={
-        "console_scripts": [
-            "mock_skill_executor = homeagent_skills.mock_skill_executor:main",
-            "nav2_skill_executor = homeagent_skills.nav2_skill_executor:main",
-            "moveit_skill_executor = homeagent_skills.moveit_skill_executor:main",
-        ],
-    },
 )

@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+import json
+import math
+import time
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String
+
+from homeagent_interfaces.msg import SkillResult
+from homeagent_skills.arm_targets import NAMED_ARM_TARGETS
+
+
+JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
+
+
+class AgentMoveItProbe(Node):
+    def __init__(self) -> None:
+        super().__init__("homeagent_moveit_agent_probe")
+        self.positions = {}
+        self.result = None
+        self.create_subscription(JointState, "/joint_states", self._on_joint_state, 20)
+        self.create_subscription(
+            SkillResult, "/homeagent/skill_result", self._on_skill_result, 10
+        )
+        self.command_pub = self.create_publisher(
+            String, "/homeagent/user_command", 10
+        )
+
+    def _on_joint_state(self, msg: JointState) -> None:
+        for name, value in zip(msg.name, msg.position):
+            self.positions[name] = float(value)
+
+    def _on_skill_result(self, msg: SkillResult) -> None:
+        if msg.action == "look_at":
+            self.result = msg
+
+    def wait_ready(self, timeout: float = 12.0) -> None:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            rclpy.spin_once(self, timeout_sec=0.1)
+            joints_ready = all(name in self.positions for name in JOINT_NAMES)
+            planner_ready = self.command_pub.get_subscription_count() > 0
+            if joints_ready and planner_ready:
+                return
+        raise RuntimeError("timed out waiting for HomeArm joint state / planner")
+
+    def current(self):
+        return [self.positions[name] for name in JOINT_NAMES]
+
+    def send_command(self, text: str) -> None:
+        msg = String()
+        msg.data = text
+        self.command_pub.publish(msg)
+
+    def wait_result(self, timeout: float = 35.0) -> SkillResult:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            rclpy.spin_once(self, timeout_sec=0.1)
+            if self.result is not None:
+                return self.result
+        raise RuntimeError("timed out waiting for MoveIt SkillResult")
+
+
+def main() -> int:
+    rclpy.init()
+    node = AgentMoveItProbe()
+    try:
+        node.wait_ready()
+        initial = node.current()
+        target = NAMED_ARM_TARGETS["inspect"]
+
+        node.send_command("机械臂检查一下")
+        result = node.wait_result()
+
+        deadline = time.monotonic() + 1.5
+        while time.monotonic() < deadline:
+            rclpy.spin_once(node, timeout_sec=0.1)
+
+        final = node.current()
+        movement = math.sqrt(
+            sum((a - b) ** 2 for a, b in zip(final, initial))
+        )
+        max_error = max(abs(a - b) for a, b in zip(final, target))
+        parsed = json.loads(result.result_json or "{}")
+
+        report = {
+            "command": "机械臂检查一下",
+            "action": result.action,
+            "skill_success": bool(result.success),
+            "skill_code": result.code,
+            "skill_result": parsed,
+            "initial": initial,
+            "target": target,
+            "final": final,
+            "movement_l2_rad": movement,
+            "max_joint_error_rad": max_error,
+            "passed": (
+                bool(result.success)
+                and result.code == "MOVEIT_SUCCEEDED"
+                and parsed.get("target_name") == "inspect"
+                and movement > 0.25
+                and max_error < 0.05
+            ),
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["passed"] else 2
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

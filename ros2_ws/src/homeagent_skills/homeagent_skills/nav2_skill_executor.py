@@ -42,12 +42,7 @@ class Nav2SkillExecutor(Node):
             return
 
         if decision.action != "navigate":
-            self._publish_result(
-                decision,
-                success=False,
-                code="UNSUPPORTED_BY_NAV2_ADAPTER",
-                result={"action": decision.action},
-            )
+            # Another skill adapter owns this approved action.
             return
 
         try:
