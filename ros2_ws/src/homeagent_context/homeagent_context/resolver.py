@@ -25,6 +25,28 @@ def _normalize_map_pose(place_record: Dict[str, Any]) -> Optional[list]:
     return pose
 
 
+def _normalize_arm_joint_target(raw: Any) -> Optional[list]:
+    if isinstance(raw, dict):
+        raw = [
+            raw.get("joint1"),
+            raw.get("joint2"),
+            raw.get("joint3"),
+            raw.get("joint4"),
+        ]
+
+    if not isinstance(raw, (list, tuple)) or len(raw) != 4:
+        return None
+
+    try:
+        joints = [float(value) for value in raw]
+    except (TypeError, ValueError):
+        return None
+
+    if not all(math.isfinite(value) for value in joints):
+        return None
+    return joints
+
+
 def resolve_trusted_context(
     *,
     action: str,
@@ -76,6 +98,22 @@ def resolve_trusted_context(
     object_payload = object_record.get("payload") or {}
     context["object_tags"] = list(object_payload.get("tags") or [])
     context["object_confidence"] = float(object_record.get("confidence", 0.0))
+
+    if action == "pick":
+        manipulation = object_payload.get("manipulation") or {}
+        joint_target = _normalize_arm_joint_target(
+            manipulation.get("pick_approach_joint_target")
+        )
+        if joint_target is None:
+            return {
+                **context,
+                "safety_context_trusted": False,
+                "context_error": "PICK_APPROACH_UNKNOWN",
+            }
+        context["resolved_arm_joint_target"] = joint_target
+        context["manipulation_stage"] = "pick_approach"
+        context["manipulation_source"] = "object_memory"
+        return context
 
     if action == "handover":
         if person_record is None:

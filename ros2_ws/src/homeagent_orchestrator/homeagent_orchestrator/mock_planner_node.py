@@ -75,6 +75,16 @@ class MockPlannerNode(Node):
                 {},
             )
 
+        if ("拿起" in text or "拿" in text or "抓取" in text) and (
+            "水杯" in text or "杯子" in text
+        ):
+            return self._make_proposal(
+                text,
+                "pick",
+                {"object": "cup"},
+                {},
+            )
+
         if "水杯" in text or "杯子" in text:
             return self._make_proposal(
                 text,

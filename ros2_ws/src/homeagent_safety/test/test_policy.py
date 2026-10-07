@@ -94,3 +94,34 @@ def test_manipulation_requires_trusted_safety_context():
     )
     assert not decision.allowed
     assert decision.code == "UNTRUSTED_SAFETY_CONTEXT"
+
+
+def test_pick_requires_resolved_trusted_arm_target():
+    decision = evaluate_action(
+        {
+            "action": "pick",
+            "params": {"object": "cup"},
+            "context": {
+                "safety_context_trusted": True,
+                "object_tags": [],
+            },
+        }
+    )
+    assert not decision.allowed
+    assert decision.code == "INVALID_MANIPULATION_CONTEXT"
+
+
+def test_pick_with_trusted_arm_target_is_allowed():
+    decision = evaluate_action(
+        {
+            "action": "pick",
+            "params": {"object": "cup"},
+            "context": {
+                "safety_context_trusted": True,
+                "object_tags": [],
+                "resolved_arm_joint_target": [0.2, -0.75, 1.15, -0.35],
+            },
+        }
+    )
+    assert decision.allowed
+    assert decision.code == "ALLOW"

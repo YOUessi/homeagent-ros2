@@ -84,3 +84,40 @@ def test_handover_missing_age_is_untrusted():
     )
     assert not context["safety_context_trusted"]
     assert context["context_error"] == "RECIPIENT_AGE_UNKNOWN"
+
+
+def test_pick_approach_comes_from_object_memory():
+    context = resolve_trusted_context(
+        action="pick",
+        params={"object": "cup"},
+        object_record={
+            "entity_id": "object-cup",
+            "name": "cup",
+            "payload": {
+                "tags": [],
+                "manipulation": {
+                    "pick_approach_joint_target": [0.2, -0.75, 1.15, -0.35]
+                },
+            },
+            "confidence": 0.95,
+        },
+    )
+    assert context["safety_context_trusted"]
+    assert context["resolved_arm_joint_target"] == [0.2, -0.75, 1.15, -0.35]
+    assert context["manipulation_stage"] == "pick_approach"
+    assert context["manipulation_source"] == "object_memory"
+
+
+def test_pick_known_object_without_approach_is_untrusted():
+    context = resolve_trusted_context(
+        action="pick",
+        params={"object": "cup"},
+        object_record={
+            "entity_id": "object-cup",
+            "name": "cup",
+            "payload": {"tags": []},
+            "confidence": 0.95,
+        },
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "PICK_APPROACH_UNKNOWN"

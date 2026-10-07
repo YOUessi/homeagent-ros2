@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from typing import Any, Dict
 
 
@@ -73,6 +74,26 @@ def evaluate_action(proposal: Dict[str, Any]) -> Decision:
             return _reject(
                 "UNTRUSTED_SAFETY_CONTEXT",
                 f"{action} requires trusted world-state safety context",
+            )
+
+    if action == "pick":
+        joint_target = context.get("resolved_arm_joint_target")
+        if not isinstance(joint_target, list) or len(joint_target) != 4:
+            return _reject(
+                "INVALID_MANIPULATION_CONTEXT",
+                "pick requires a trusted 4-joint approach target",
+            )
+        try:
+            values = [float(value) for value in joint_target]
+        except (TypeError, ValueError):
+            return _reject(
+                "INVALID_MANIPULATION_CONTEXT",
+                "pick approach target must be numeric",
+            )
+        if not all(math.isfinite(value) for value in values):
+            return _reject(
+                "INVALID_MANIPULATION_CONTEXT",
+                "pick approach target must be finite",
             )
 
     if action == "place":

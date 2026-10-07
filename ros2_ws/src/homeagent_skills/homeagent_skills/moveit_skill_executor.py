@@ -8,7 +8,7 @@ from rclpy.node import Node
 
 from homeagent_interfaces.msg import SafetyDecision, SkillResult
 
-from .arm_targets import target_for_action
+from .arm_targets import resolve_arm_target
 
 
 JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
@@ -45,12 +45,23 @@ class MoveItSkillExecutor(Node):
         if not decision.allowed:
             return
 
-        resolved = target_for_action(decision.action)
+        try:
+            proposal = json.loads(decision.proposal_json or "{}")
+            resolved = resolve_arm_target(decision.action, proposal)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            self._publish_result(
+                decision,
+                success=False,
+                code="INVALID_TRUSTED_ARM_CONTEXT",
+                result={"error": str(exc)},
+            )
+            return
+
         if resolved is None:
             # Another skill adapter owns this approved action.
             return
 
-        target_name, joints = resolved
+        target_name, joints, target_source = resolved
 
         if not self._client.wait_for_server(timeout_sec=self._server_timeout):
             self._publish_result(
@@ -93,6 +104,7 @@ class MoveItSkillExecutor(Node):
             "decision": decision,
             "target_name": target_name,
             "joints": joints,
+            "target_source": target_source,
         }
         send_future.add_done_callback(
             lambda future, rid=decision.request_id:
@@ -100,7 +112,8 @@ class MoveItSkillExecutor(Node):
         )
         self.get_logger().info(
             f"MOVEIT_SEND request_id={decision.request_id} "
-            f"action={decision.action} target={target_name}"
+            f"action={decision.action} target={target_name} "
+            f"source={target_source}"
         )
 
     def _on_goal_response(self, request_id, future) -> None:
@@ -156,20 +169,35 @@ class MoveItSkillExecutor(Node):
             return
 
         success = status == 4 and error_code == MoveItErrorCodes.SUCCESS
+        if success and decision.action == "pick":
+            code = "MOVEIT_PICK_APPROACH_SUCCEEDED"
+        else:
+            code = "MOVEIT_SUCCEEDED" if success else "MOVEIT_FAILED"
+
+        payload = {
+            "target_name": state["target_name"],
+            "joint_target": state["joints"],
+            "target_source": state["target_source"],
+            "status": status,
+            "moveit_error_code": error_code,
+            "planning_time_sec": float(result.planning_time),
+            "planned_points": len(
+                result.planned_trajectory.joint_trajectory.points
+            ),
+        }
+        if decision.action == "pick":
+            payload.update(
+                {
+                    "manipulation_stage": "pick_approach",
+                    "grasp_complete": False,
+                }
+            )
+
         self._publish_result(
             decision,
             success=success,
-            code="MOVEIT_SUCCEEDED" if success else "MOVEIT_FAILED",
-            result={
-                "target_name": state["target_name"],
-                "joint_target": state["joints"],
-                "status": status,
-                "moveit_error_code": error_code,
-                "planning_time_sec": float(result.planning_time),
-                "planned_points": len(
-                    result.planned_trajectory.joint_trajectory.points
-                ),
-            },
+            code=code,
+            result=payload,
         )
 
     def _publish_result(

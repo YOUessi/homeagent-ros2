@@ -164,3 +164,14 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 当前 workspace 10 packages，24/24 unit tests。
 
 详细数据与非阻塞告警见 `docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.4: Memory-backed Pick Approach
+
+- `pick(cup)` 不再允许 Agent/LLM 提供关节角；`cup` 的 pick-approach joint target 来自 Household Memory。
+- Context / Safety 对不存在、缺失姿态、非法 joint target 全部 fail-closed。
+- MoveIt2 E2E：`拿起水杯 → pick(cup) → Memory → Safety → OMPL → homearm_controller` 通过。
+- 实际 joint movement L2 ≈ 1.4254 rad，最大终态误差 ≈ 0.00632 rad。
+- 当前明确只完成 pick approach，`grasp_complete=false`；夹爪闭合与 object attach 尚未实现。
+- 单元测试提升到 31/31。
+
+详细过程：`docs/journal/2026-10-07.md`。

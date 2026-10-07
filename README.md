@@ -42,7 +42,7 @@ SkillResult -> Agent feedback loop
 - `homeagent_safety`：动作白名单、急停、禁区、危险物品/人员规则。
 - `homeagent_orchestrator`：主脑调度骨架、可重复 mock planner，以及 DeepSeek 高层动作规划器。
 - `homeagent_context`：把不可信 Agent candidate 与家庭档案/策略合并为可信 world-state safety context。
-- `homeagent_skills`：安全门之后的技能执行适配层；已有 mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。Nav2 只执行 Household Memory 解析出的可信 `map_pose`；MoveIt2 只消费 Safety-approved 的机械臂高层动作。
+- `homeagent_skills`：安全门之后的技能执行适配层；已有 mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。Nav2 只执行 Household Memory 解析出的可信 `map_pose`；MoveIt2 只消费 Safety-approved 的机械臂高层动作，`pick` 的接近关节目标同样来自 Object Memory，而不是 Agent 输出。
 - `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
 - `homeagent_description`：自研 HomeBot 差速底盘、LiDAR、Camera 与家庭房间 Gazebo 模型。
 - `homeagent_navigation`：SLAM Toolbox / Nav2 配置与仿真导航入口。
@@ -79,7 +79,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation 单元测试 24/24 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox、地图保存、Memory-backed Nav2 真导航，以及 HomeArm 的 MoveIt2 + ros2_control 真规划/执行均已在隔离 Docker 环境中端到端验证通过。
+当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox、地图保存、Memory-backed Nav2 真导航，以及 HomeArm 的 MoveIt2 + ros2_control 真规划/执行、Memory-backed pick approach 均已在隔离 Docker 环境中端到端验证通过。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -99,6 +99,10 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 # HomeAgent 机械臂闭环：
 # “机械臂检查一下” -> Context -> Safety -> MoveIt2 -> ros2_control
 ./scripts/docker_moveit_agent_demo.sh
+
+# Object Memory 驱动的抓取接近：
+# “拿起水杯” -> Memory -> Safety -> MoveIt2 pick approach
+./scripts/docker_moveit_pick_demo.sh
 ```
 
 `demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；所有运行产物默认被 Git 忽略。

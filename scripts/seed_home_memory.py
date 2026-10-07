@@ -79,7 +79,13 @@ DEFAULT_ENTITIES = [
         "entity_type": "object",
         "entity_id": "object-cup",
         "name": "cup",
-        "payload": {"display_name": "水杯", "tags": []},
+        "payload": {
+            "display_name": "水杯",
+            "tags": [],
+            "manipulation": {
+                "pick_approach_joint_target": [0.20, -0.75, 1.15, -0.35]
+            },
+        },
         "confidence": 0.95,
         "source": "home_profile_seed",
     },
