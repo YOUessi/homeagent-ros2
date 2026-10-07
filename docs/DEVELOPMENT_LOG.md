@@ -175,3 +175,14 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 单元测试提升到 31/31。
 
 详细过程：`docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.5: Gripper + Logical Attach
+
+- HomeArm 新增可执行 `gripper_joint` 与 `gripper_controller`。
+- pick 从 Memory-backed approach 推进为：MoveIt approach → FollowJointTrajectory close → ApplyPlanningScene attach。
+- E2E 实测 gripper 0.04m → 0.00m，controller action SUCCEEDED。
+- `/get_planning_scene` 实际返回 attached object `cup`。
+- 最终 code：`MOVEIT_PICK_LOGICAL_ATTACH_SUCCEEDED`。
+- 明确保留 `physical_grasp=false` / `grasp_complete=false`，当前仍是 GenericSystem 控制器级仿真。
+
+详细数据见 `docs/journal/2026-10-07.md`。

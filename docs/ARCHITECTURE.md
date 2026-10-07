@@ -28,7 +28,7 @@ Agent 不接触低层速度/关节命令，只能调用高层技能：
 - `speak(text)`
 - `stop()`
 
-当前 `homeagent_skills` 已提供 deterministic mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。导航语义目标不再由 skill 内部硬编码：`Trusted Context Resolver` 先从 `homeagent_memory` 的 `place` 实体解析可信 `map_pose`，Safety 校验后 Nav2 adapter 只执行该可信 pose。HomeArm 的 `look_at` 等固定动作从可信 skill library 解析 joint target；`pick(object)` 的接近姿态则从该 object 的 Household Memory 中解析。两类机械臂动作都只有经过 `action_approved` 后才能进入 MoveIt2/OMPL，并最终交给 ros2_control `homearm_controller`。
+当前 `homeagent_skills` 已提供 deterministic mock、真实 Nav2 adapter 与真实 MoveIt2 adapter。导航语义目标不再由 skill 内部硬编码：`Trusted Context Resolver` 先从 `homeagent_memory` 的 `place` 实体解析可信 `map_pose`，Safety 校验后 Nav2 adapter 只执行该可信 pose。HomeArm 的 `look_at` 等固定动作从可信 skill library 解析 joint target；`pick(object)` 的接近姿态则从该 object 的 Household Memory 中解析。Safety-approved pick 会依次进入 MoveIt2/OMPL、`homearm_controller`、`gripper_controller`，并通过 MoveIt PlanningScene 建立逻辑 attach。当前使用 GenericSystem，因此逻辑 attach 与物理抓取严格区分。
 
 ### D. 主脑调度层
 - task planner

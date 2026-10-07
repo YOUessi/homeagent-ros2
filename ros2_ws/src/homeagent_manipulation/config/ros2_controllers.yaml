@@ -8,6 +8,9 @@ controller_manager:
     homearm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
 homearm_controller:
   ros__parameters:
     joints:
@@ -15,6 +18,20 @@ homearm_controller:
       - joint2
       - joint3
       - joint4
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      - gripper_joint
     command_interfaces:
       - position
     state_interfaces:

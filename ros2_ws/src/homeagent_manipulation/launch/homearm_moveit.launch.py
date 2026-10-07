@@ -79,6 +79,22 @@ def generate_launch_description():
         ],
     )
 
+    gripper_controller = TimerAction(
+        period=2.0,
+        actions=[
+            Node(
+                package="controller_manager",
+                executable="spawner",
+                arguments=[
+                    "gripper_controller",
+                    "--controller-manager",
+                    "/controller_manager",
+                ],
+                output="screen",
+            )
+        ],
+    )
+
     move_group = Node(
         package="moveit_ros_move_group",
         executable="move_group",
@@ -102,6 +118,7 @@ def generate_launch_description():
             ros2_control_node,
             joint_state_broadcaster,
             homearm_controller,
+            gripper_controller,
             move_group,
         ]
     )

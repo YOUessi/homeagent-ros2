@@ -79,7 +79,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox、地图保存、Memory-backed Nav2 真导航，以及 HomeArm 的 MoveIt2 + ros2_control 真规划/执行、Memory-backed pick approach 均已在隔离 Docker 环境中端到端验证通过。
+当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、LiDAR/odometry、SLAM Toolbox、地图保存、Memory-backed Nav2 真导航，以及 HomeArm 的 MoveIt2 + ros2_control 真规划/执行均已端到端验证。`pick(cup)` 已进一步完成 Memory-backed approach → gripper close → MoveIt PlanningScene logical attach；当前仍明确标记 `physical_grasp=false`，尚不是动力学物理抓取。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -100,8 +100,9 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 # “机械臂检查一下” -> Context -> Safety -> MoveIt2 -> ros2_control
 ./scripts/docker_moveit_agent_demo.sh
 
-# Object Memory 驱动的抓取接近：
-# “拿起水杯” -> Memory -> Safety -> MoveIt2 pick approach
+# Object Memory 驱动的抓取链：
+# “拿起水杯” -> Memory -> Safety -> MoveIt2 approach
+# -> gripper close -> PlanningScene logical attach
 ./scripts/docker_moveit_pick_demo.sh
 ```
 
