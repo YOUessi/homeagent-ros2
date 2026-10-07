@@ -136,8 +136,9 @@ SkillResult / observation_(t+1)
 2. Agent 只输出 schema 约束的高层技能调用。
 3. Safety 独立于 LLM、可单元测试、可审计、默认拒绝未知动作。
 4. 只有 `action_approved` 能进入技能层；技能层再次检查 `allowed`，双重 fail-closed。
-5. 仿真先行，真机与仿真保持同一 skill contract。
+5. 仿真先行，真机与仿真保持同一 skill contract；机械臂同时维护 GenericSystem 快速回归与 GazeboSystem 物理关节两条执行后端。
 6. 每个关键请求都有 request id、结果码、执行反馈和日志。
+7. `PlanningScene attach` 与真实接触抓取必须分开表述；没有物理接触证据时保持 `physical_grasp=false`。
 
 ## 5. Mobile Manipulator 联合拓扑
 

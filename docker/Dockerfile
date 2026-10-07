@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        ros-humble-ros2-controllers \
        ros-humble-moveit \
        ros-humble-gazebo-ros-pkgs \
+       ros-humble-gazebo-ros2-control \
        ros-humble-turtlebot3 \
        ros-humble-turtlebot3-gazebo \
        ros-humble-turtlebot3-navigation2 \

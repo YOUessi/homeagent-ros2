@@ -201,3 +201,15 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 当前为控制/规划级 mobile manipulator；HomeArm 物理动力学挂载仍是后续任务。
 
 详细数据见 `docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.7: HomeArm Gazebo 物理关节
+
+- 保留 HomeArm `mock_components/GenericSystem` 快速 CI 路径。
+- 新增 HomeBot + HomeArm 单一组合 URDF，HomeArm 通过 fixed mount 真正属于移动底盘模型。
+- 新增 `gazebo_ros2_control/GazeboSystem` 路径；MoveIt2 → FollowJointTrajectory → Gazebo 物理关节执行已通过。
+- 最终物理验收：42 个规划轨迹点、机械臂关节 L2 位移 1.559 rad、最大关节误差 0.0198 rad、底盘漂移约 0.00057 m，PASS。
+- 修复 `gazebo_ros2_control` 对标准 `robot_state_publisher` 节点名的依赖。
+- 增加左右轮 `/joint_states` 发布，MoveIt 完整机器人状态警告消失。
+- 仍不把 PlanningScene logical attach 视为物理抓取；Gazebo 真实物体接触抓取是下一阶段。
+
+详细数据、失败过程与修复记录见 `docs/journal/2026-10-07.md`。

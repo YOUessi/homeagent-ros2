@@ -46,7 +46,7 @@ SkillResult -> Agent feedback loop
 - `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
 - `homeagent_description`：自研 HomeBot 差速底盘、LiDAR、Camera 与家庭房间 Gazebo 模型。
 - `homeagent_navigation`：SLAM Toolbox / Nav2 配置与仿真导航入口。
-- `homeagent_manipulation`：自研 4-DOF HomeArm、MoveIt2/OMPL、ros2_control GenericSystem 与 `homearm_controller`。
+- `homeagent_manipulation`：自研 4-DOF HomeArm、MoveIt2/OMPL 与 ros2_control。保留 GenericSystem 快速回归路径，同时新增 `gazebo_ros2_control/GazeboSystem` 物理关节路径，可将 HomeArm 真实固定到 HomeBot 模型上运行。
 - `homeagent_bringup`：核心服务一键启动与 planner / real-skill adapter 切换。
 
 ## 仓库结构
@@ -79,7 +79,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、SLAM、Memory-backed Nav2 真导航，以及 HomeArm MoveIt2 + ros2_control + gripper 均已验证。当前还已完成同一 ROS graph 下的 mobile-manipulator 联合 Demo：`去客厅 → Nav2 真移动 → 拿水杯 → MoveIt2 approach → gripper close → PlanningScene logical attach`。当前仍明确标记 `physical_grasp=false`，HomeArm 物理动力学挂载是下一阶段。
+当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、SLAM、Memory-backed Nav2 真导航、HomeArm MoveIt2 + gripper，以及 `gazebo_ros2_control/GazeboSystem` 物理机械臂关节执行均已验证。当前还已完成同一 ROS graph 下的 mobile-manipulator 联合 Demo：`去客厅 → Nav2 真移动 → 拿水杯 → MoveIt2 approach → gripper close → PlanningScene logical attach`。需要严格区分：机械臂关节物理动力学已经验证，但对真实 Gazebo 物体的接触抓取仍未验证，因此抓取结果仍标记 `physical_grasp=false`。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -108,6 +108,10 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 # 当前最完整的联合 Demo：
 # 去客厅 -> Nav2 真移动 -> 拿水杯 -> MoveIt2 + gripper + attach
 ./scripts/demo_mobile_manipulator.sh
+
+# HomeBot + HomeArm 组合模型的 Gazebo 物理关节验证：
+# MoveIt2 -> FollowJointTrajectory -> gazebo_ros2_control -> Gazebo joints
+./scripts/docker_gazebo_homearm_physics_smoke.sh
 ```
 
 `demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；所有运行产物默认被 Git 忽略。
