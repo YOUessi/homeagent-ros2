@@ -121,3 +121,7 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 ### Gazebo 接触门控约束 Demo
 
 运行 `./scripts/demo_gazebo_contact_grasp.sh`。该实验要求两个夹爪手指都与目标杯子产生 Gazebo contact，并在夹爪达到闭合阈值后建立 Gazebo fixed constraint，再执行 carry。它不使用 MoveIt PlanningScene attach；同时明确不是纯摩擦维持，也不是自主桌面抓取。
+
+### 当前最完整物理联合 Demo
+
+运行 `./scripts/demo_physical_mobile_manipulator.sh`。同一 Gazebo 组合机器人依次执行“去客厅”和“拿起水杯”：Nav2 使用 Household Memory 的可信房间坐标完成真实移动；操作阶段使用 Object Memory 的可信目标、GazeboSystem 关节动力学与双指 contact gate 完成 carry。仍明确标记为非纯摩擦、非自主桌面获取。
