@@ -12,7 +12,7 @@ from homeagent_interfaces.msg import SafetyDecision, SkillResult
 
 
 DEFAULT_TARGETS: Dict[str, Tuple[float, float, float]] = {
-    "living_room": (0.0, 1.65, 0.0),
+    "living_room": (0.80, 0.00, 0.0),
     "kitchen": (1.75, -1.35, 0.0),
     "bedroom": (-1.75, -1.35, 0.0),
     "hallway": (0.0, 0.0, 0.0),

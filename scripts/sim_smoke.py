@@ -57,10 +57,15 @@ def main() -> int:
         initial = node.odom.pose.pose.position
         x0, y0 = float(initial.x), float(initial.y)
 
-        finite_ranges = sum(
-            1 for value in node.scan.ranges if math.isfinite(value)
-        )
+        finite_values = [
+            float(value) for value in node.scan.ranges if math.isfinite(value)
+        ]
+        finite_ranges = len(finite_values)
         sample_count = len(node.scan.ranges)
+        finite_values_sorted = sorted(finite_values)
+        scan_min = finite_values_sorted[0] if finite_values_sorted else None
+        scan_max = finite_values_sorted[-1] if finite_values_sorted else None
+        close_returns = sum(1 for value in finite_values if value < 0.30)
 
         node.drive_forward(speed=0.20, duration=2.0)
         node.spin_until_ready(timeout=2.0)
@@ -71,6 +76,9 @@ def main() -> int:
         result = {
             "scan_samples": sample_count,
             "finite_scan_samples": finite_ranges,
+            "scan_min_m": scan_min,
+            "scan_max_m": scan_max,
+            "scan_returns_lt_0_30m": close_returns,
             "initial_xy": [x0, y0],
             "final_xy": [x1, y1],
             "displacement_m": displacement,

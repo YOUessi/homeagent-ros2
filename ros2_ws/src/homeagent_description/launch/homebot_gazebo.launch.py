@@ -28,7 +28,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "world": world_file,
-            "verbose": "false",
+            "verbose": "true",
             "gui": gui,
         }.items(),
     )

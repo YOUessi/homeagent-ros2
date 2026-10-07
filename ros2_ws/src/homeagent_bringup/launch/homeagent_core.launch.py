@@ -8,7 +8,10 @@ from launch_ros.actions import Node
 def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
     use_nav2 = LaunchConfiguration("use_nav2")
+    use_sim_time = LaunchConfiguration("use_sim_time")
     memory_db = LaunchConfiguration("memory_db")
+
+    common_params = {"use_sim_time": use_sim_time}
 
     return LaunchDescription(
         [
@@ -23,6 +26,11 @@ def generate_launch_description():
                 description="Use Nav2-backed navigation skill executor.",
             ),
             DeclareLaunchArgument(
+                "use_sim_time",
+                default_value="false",
+                description="Use the ROS simulation clock for HomeAgent nodes.",
+            ),
+            DeclareLaunchArgument(
                 "memory_db",
                 default_value="/tmp/homeagent_memory.sqlite3",
                 description="SQLite path for household memory.",
@@ -32,25 +40,33 @@ def generate_launch_description():
                 executable="safety_node",
                 name="homeagent_safety",
                 output="screen",
+                parameters=[common_params],
             ),
             Node(
                 package="homeagent_context",
                 executable="context_node",
                 name="homeagent_context",
                 output="screen",
+                parameters=[common_params],
             ),
             Node(
                 package="homeagent_memory",
                 executable="memory_node",
                 name="homeagent_memory",
                 output="screen",
-                parameters=[{"database_path": memory_db}],
+                parameters=[
+                    {
+                        "use_sim_time": use_sim_time,
+                        "database_path": memory_db,
+                    }
+                ],
             ),
             Node(
                 package="homeagent_skills",
                 executable="mock_skill_executor",
                 name="homeagent_skill_executor",
                 output="screen",
+                parameters=[common_params],
                 condition=UnlessCondition(use_nav2),
             ),
             Node(
@@ -58,6 +74,7 @@ def generate_launch_description():
                 executable="nav2_skill_executor",
                 name="homeagent_skill_executor",
                 output="screen",
+                parameters=[common_params],
                 condition=IfCondition(use_nav2),
             ),
             Node(
@@ -65,6 +82,7 @@ def generate_launch_description():
                 executable="mock_planner",
                 name="homeagent_planner",
                 output="screen",
+                parameters=[common_params],
                 condition=UnlessCondition(use_deepseek),
             ),
             Node(
@@ -72,6 +90,7 @@ def generate_launch_description():
                 executable="deepseek_planner",
                 name="homeagent_planner",
                 output="screen",
+                parameters=[common_params],
                 condition=IfCondition(use_deepseek),
             ),
         ]
