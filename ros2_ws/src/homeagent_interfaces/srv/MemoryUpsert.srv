@@ -1,0 +1,10 @@
+string entity_type
+string entity_id
+string name
+string payload_json
+float32 confidence
+string source
+---
+bool success
+string code
+string record_json

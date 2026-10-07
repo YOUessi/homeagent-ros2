@@ -1,0 +1,11 @@
+string entity_type
+string entity_id
+string zone
+string pose_json
+string payload_json
+float32 confidence
+string source
+---
+bool success
+string code
+string observation_id

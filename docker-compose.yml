@@ -1,0 +1,18 @@
+services:
+  homeagent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: homeagent-ros2:humble
+    network_mode: host
+    ipc: host
+    environment:
+      - ROS_DOMAIN_ID=42
+      - TURTLEBOT3_MODEL=waffle
+      - DISPLAY=${DISPLAY:-}
+    volumes:
+      - .:/workspace
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    working_dir: /workspace
+    stdin_open: true
+    tty: true

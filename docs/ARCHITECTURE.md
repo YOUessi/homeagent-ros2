@@ -11,43 +11,95 @@
 
 ### B. ROS2 能力层
 - TF2 / robot_state_publisher
-- SLAM
+- SLAM Toolbox
 - Nav2
 - ros2_control
 - MoveIt2
 - perception nodes
 
-### C. 主脑调度层
+### C. 技能执行层
+Agent 不接触低层速度/关节命令，只能调用高层技能：
+- `navigate(target)`
+- `observe(object)`
+- `look_at(target)`
+- `pick(object)`
+- `place(object, target)`
+- `handover(object, recipient)`
+- `speak(text)`
+- `stop()`
+
+当前 `homeagent_skills` 使用 mock adapter。后续保持相同接口替换为 Nav2 / MoveIt2 / perception adapter。
+
+### D. 主脑调度层
+- task planner
 - 状态机 / Behavior Tree
 - skill registry
-- task executor
-- retry / timeout / cancel
-- observation feedback
+- timeout / cancel / retry
+- execution feedback / replanning
 
-### D. 安全层
-所有 Agent 动作先进入 `homeagent_safety`：
+### E. 安全层
+所有 Agent 动作在技能执行之前进入 `homeagent_safety`：
 - 动作白名单
-- 急停约束
-- 危险物体与人员规则
+- emergency stop
 - 禁入区域
-- 权限与上下文检查
-- 审计日志
+- 危险物体与未成年人规则
+- 权限/上下文检查
+- fail-closed
 
-### E. Agent 层
+### F. 家庭记忆层
+`homeagent_memory` 使用 SQLite 保存：
+- object / person / place entity
+- observation history
+- location / pose
+- confidence / source / revision
+- human correction records
+- field-level correction weight metadata
+
+### G. Agent 层
 - DeepSeek / 可替换 LLM
-- tool calling
+- structured tool calling
 - task planning
 - scene reasoning
 - memory retrieval/update
 - speech interface
 
-## 2. 执行闭环
+## 2. 强类型 ROS2 协议
+
+内部关键边界不再使用自由字符串控制动作：
+
+```text
+ActionProposal
+  request_id
+  action
+  params_json
+  context_json
+  source
+
+SafetyDecision
+  request_id
+  allowed
+  code
+  reason
+  action
+  proposal_json
+
+SkillResult
+  request_id
+  action
+  success
+  code
+  result_json
+```
+
+家庭记忆通过 `MemoryUpsert / MemoryQuery / MemoryObserve / MemoryCorrect` ROS2 service 暴露。
+
+## 3. 执行闭环
 
 ```text
 observation_t
     |
     v
-Agent -> structured action proposal
+Agent -> ActionProposal
     |
     v
 Safety policy(state_t, action_t)
@@ -55,19 +107,27 @@ Safety policy(state_t, action_t)
     +---- reject ----> reason -> Agent replans
     |
     v
-approved action
+approved decision
     |
     v
-ROS2 skill executor
+Skill adapter
     |
     v
-result / observation_(t+1)
+Nav2 / MoveIt2 / perception
+    |
+    v
+SkillResult / observation_(t+1)
+    |
+    +----> memory update
+    |
+    +----> Agent next step
 ```
 
-## 3. 设计约束
+## 4. 设计约束
 
-1. LLM 不发布底盘速度、关节轨迹等低层控制量。
-2. Agent 只输出受 schema 约束的高层技能调用。
-3. 安全规则层独立于 LLM，可单元测试、可审计。
-4. 仿真先行，真机接口与仿真接口保持同一 skill contract。
-5. 所有关键动作具备 request id、结果状态和日志。
+1. LLM 不发布 `/cmd_vel`、关节轨迹等低层控制量。
+2. Agent 只输出 schema 约束的高层技能调用。
+3. Safety 独立于 LLM、可单元测试、可审计、默认拒绝未知动作。
+4. 只有 `action_approved` 能进入技能层；技能层再次检查 `allowed`，双重 fail-closed。
+5. 仿真先行，真机与仿真保持同一 skill contract。
+6. 每个关键请求都有 request id、结果码、执行反馈和日志。

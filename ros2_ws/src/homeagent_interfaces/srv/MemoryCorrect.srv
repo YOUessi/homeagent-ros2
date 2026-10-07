@@ -1,0 +1,10 @@
+string entity_type
+string entity_id
+string field
+string value_json
+float32 weight
+string source
+---
+bool success
+string code
+string record_json

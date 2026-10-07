@@ -2,8 +2,8 @@ import json
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
 
+from homeagent_interfaces.msg import ActionProposal, SafetyDecision
 from .policy import evaluate_action
 
 
@@ -11,55 +11,75 @@ class SafetyNode(Node):
     def __init__(self) -> None:
         super().__init__("homeagent_safety")
         self._proposal_sub = self.create_subscription(
-            String,
+            ActionProposal,
             "/homeagent/action_proposal",
             self._on_proposal,
             10,
         )
         self._approved_pub = self.create_publisher(
-            String, "/homeagent/action_approved", 10
+            SafetyDecision, "/homeagent/action_approved", 10
         )
         self._rejected_pub = self.create_publisher(
-            String, "/homeagent/action_rejected", 10
+            SafetyDecision, "/homeagent/action_rejected", 10
         )
         self.get_logger().info("HomeAgent safety engine ready")
 
-    def _on_proposal(self, msg: String) -> None:
+    def _on_proposal(self, msg: ActionProposal) -> None:
         try:
-            proposal = json.loads(msg.data)
+            params = json.loads(msg.params_json or "{}")
+            context = json.loads(msg.context_json or "{}")
         except json.JSONDecodeError as exc:
-            self._publish_rejection(None, "INVALID_JSON", str(exc))
-            return
-
-        decision = evaluate_action(proposal)
-        if decision.allowed:
-            envelope = {
-                "proposal": proposal,
-                "safety": {"allowed": True, "code": decision.code},
-            }
-            out = String()
-            out.data = json.dumps(envelope, ensure_ascii=False)
-            self._approved_pub.publish(out)
-            self.get_logger().info(
-                f"ALLOW action={proposal.get('action')} request_id={proposal.get('request_id')}"
+            self._publish_decision(
+                msg,
+                allowed=False,
+                code="INVALID_JSON",
+                reason=str(exc),
             )
             return
 
-        self._publish_rejection(
-            proposal,
-            decision.code,
-            decision.reason,
+        proposal = {
+            "request_id": msg.request_id,
+            "action": msg.action,
+            "params": params,
+            "context": context,
+            "source": msg.source,
+        }
+        decision = evaluate_action(proposal)
+        self._publish_decision(
+            msg,
+            allowed=decision.allowed,
+            code=decision.code,
+            reason=decision.reason,
+            proposal=proposal,
         )
 
-    def _publish_rejection(self, proposal, code: str, reason: str) -> None:
-        envelope = {
-            "proposal": proposal,
-            "safety": {"allowed": False, "code": code, "reason": reason},
-        }
-        out = String()
-        out.data = json.dumps(envelope, ensure_ascii=False)
-        self._rejected_pub.publish(out)
-        self.get_logger().warning(f"REJECT code={code} reason={reason}")
+    def _publish_decision(
+        self,
+        msg: ActionProposal,
+        *,
+        allowed: bool,
+        code: str,
+        reason: str,
+        proposal=None,
+    ) -> None:
+        out = SafetyDecision()
+        out.request_id = msg.request_id
+        out.allowed = allowed
+        out.code = code
+        out.reason = reason
+        out.action = msg.action
+        out.proposal_json = json.dumps(proposal or {}, ensure_ascii=False)
+
+        if allowed:
+            self._approved_pub.publish(out)
+            self.get_logger().info(
+                f"ALLOW action={msg.action} request_id={msg.request_id}"
+            )
+        else:
+            self._rejected_pub.publish(out)
+            self.get_logger().warning(
+                f"REJECT action={msg.action} code={code} request_id={msg.request_id} reason={reason}"
+            )
 
 
 def main(args=None) -> None:

@@ -1,14 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>homeagent_orchestrator</name>
+  <name>homeagent_skills</name>
   <version>0.1.0</version>
-  <description>Main orchestration layer for HomeAgent-ROS2.</description>
+  <description>High-level robot skill adapters for HomeAgent.</description>
   <maintainer email="723911823@qq.com">YOUessi</maintainer>
   <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
   <exec_depend>homeagent_interfaces</exec_depend>
 
   <test_depend>ament_copyright</test_depend>

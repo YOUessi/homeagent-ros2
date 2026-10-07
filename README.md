@@ -4,7 +4,7 @@
 
 ## 核心原则
 
-LLM 不能直接控制物理执行器。所有动作必须经过结构化动作协议与安全法则引擎：
+LLM 不能直接控制物理执行器。所有动作必须先经过结构化动作协议和独立安全法则引擎：
 
 ```text
 User / Voice / Vision
@@ -13,7 +13,7 @@ User / Voice / Vision
   Agent Planner
         |
         v
- Action Proposal
+ ActionProposal (typed ROS2 msg)
         |
         v
  Safety Engine
@@ -21,30 +21,60 @@ User / Voice / Vision
  allow     reject
    |         |
    v         v
-Skill Executor   Audit Log
+Skill Executor   Audit / Replan
    |
    v
-ROS2 / Nav2 / MoveIt2 / Perception
+Nav2 / MoveIt2 / Perception / Speech
+   |
+   v
+SkillResult -> Agent feedback loop
 ```
+
+## 当前模块
+
+- `homeagent_interfaces`：强类型 ROS2 消息/服务协议。
+- `homeagent_safety`：动作白名单、急停、禁区、危险物品/人员规则。
+- `homeagent_orchestrator`：主脑调度骨架与可重复的 mock planner。
+- `homeagent_skills`：安全门之后的技能执行适配层；当前为 mock，后续替换为 Nav2 / MoveIt2。
+- `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
 
 ## 仓库结构
 
 - `ros2_ws/`：ROS2 Humble 工作空间
-- `ros2_ws/src/homeagent_safety/`：安全动作校验节点
-- `ros2_ws/src/homeagent_orchestrator/`：主脑调度/Agent 接入节点
-- `agent/`：LLM、工具调用、任务规划与记忆层
-- `simulation/`：Gazebo / Isaac Sim 场景与机器人模型
-- `docs/`：架构、环境、JD 对照、开发日志
-- `scripts/`：环境检查与开发脚本
-- `tests/`：跨模块集成测试
+- `agent/`：DeepSeek、tool calling、任务规划、场景推理
+- `simulation/`：Gazebo / Isaac Sim
+- `docker/`：可复现 ROS2/导航/机械臂依赖环境
+- `docs/`：架构、JD 对照、环境、开发日志
+- `scripts/`：构建、测试、环境检查和演示脚本
 
-## 当前状态
+## 已验证闭环
 
-Phase 0 已启动：
-- Tang 作为唯一 ROS2 / GPU / 仿真运行环境。
-- ROS2 Humble 已确认可用。
-- 创建 ROS2 workspace 和安全、调度两个基础包。
-- 第一版安全规则引擎实现中。
-- GitHub 作为唯一事实源（source of truth），本地 Tang 负责运行与测试。
+```text
+“去客厅”
+ -> mock planner
+ -> navigate(living_room)
+ -> Safety ALLOW
+ -> mock skill executor
+ -> MOCK_NAVIGATION_COMPLETE
+ -> planner 收到执行反馈
+```
 
-详见 `docs/DEVELOPMENT_LOG.md`。
+危险动作验证：
+
+```text
+“把刀给小孩”
+ -> handover(kitchen_knife, sharp, recipient_age=10)
+ -> Safety REJECT: DANGEROUS_HANDOVER_MINOR
+ -> 技能执行层没有收到动作
+```
+
+当前 `colcon build` 已通过 5 个 package，Safety + Memory 单元测试 7/7 通过。
+
+## 快速验证
+
+```bash
+./scripts/build_and_test.sh
+./scripts/demo_core.sh
+```
+
+开发过程见 `docs/DEVELOPMENT_LOG.md`。

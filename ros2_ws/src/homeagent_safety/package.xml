@@ -4,11 +4,11 @@
   <name>homeagent_safety</name>
   <version>0.1.0</version>
   <description>Safety policy gate for HomeAgent high-level robot actions.</description>
-  <maintainer email="devnull@example.com">Tang Naisheng</maintainer>
+  <maintainer email="723911823@qq.com">YOUessi</maintainer>
   <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>homeagent_interfaces</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
