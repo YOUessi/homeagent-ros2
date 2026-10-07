@@ -9,6 +9,7 @@ def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
     use_nav2 = LaunchConfiguration("use_nav2")
     use_moveit = LaunchConfiguration("use_moveit")
+    use_gazebo_contact_pick = LaunchConfiguration("use_gazebo_contact_pick")
     use_sim_time = LaunchConfiguration("use_sim_time")
     memory_db = LaunchConfiguration("memory_db")
 
@@ -20,6 +21,8 @@ def generate_launch_description():
             use_nav2,
             "'.lower() in ['true','1','yes'] or '",
             use_moveit,
+            "'.lower() in ['true','1','yes'] or '",
+            use_gazebo_contact_pick,
             "'.lower() in ['true','1','yes']",
         ]
     )
@@ -40,6 +43,11 @@ def generate_launch_description():
                 "use_moveit",
                 default_value="false",
                 description="Enable the MoveIt2-backed HomeArm skill adapter.",
+            ),
+            DeclareLaunchArgument(
+                "use_gazebo_contact_pick",
+                default_value="false",
+                description="Enable simulation-only Gazebo contact-gated pick adapter.",
             ),
             DeclareLaunchArgument(
                 "use_sim_time",
@@ -100,6 +108,14 @@ def generate_launch_description():
                 output="screen",
                 parameters=[common_params],
                 condition=IfCondition(use_moveit),
+            ),
+            Node(
+                package="homeagent_skills",
+                executable="gazebo_contact_pick_executor",
+                name="homeagent_gazebo_contact_pick_executor",
+                output="screen",
+                parameters=[common_params],
+                condition=IfCondition(use_gazebo_contact_pick),
             ),
             Node(
                 package="homeagent_orchestrator",
