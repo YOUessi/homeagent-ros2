@@ -80,3 +80,17 @@ Tang 的用户级 Python 安装了 pytest 9.1.1，而 ROS2 Humble 的 `launch_te
 
 ### 依赖环境处理
 Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。新增 Docker 可复现环境，通过本机已有 `ubuntu:22.04` 镜像安装 ROS2 Humble + Nav2 + SLAM Toolbox + ros2_control + MoveIt2 + Gazebo + TurtleBot3。这样既不污染主机，也能继续完成导航/建图/机械臂仿真。
+
+## 2026-10-07 — Phase 0.4: DeepSeek Agent 接入骨架
+
+### 实现
+- 新增 `planner_core.py`：严格解析单步高层动作 JSON，拒绝未知/底层控制动作。
+- 新增 `deepseek_client.py`：OpenAI-compatible chat/completions HTTP client，仅从环境变量读取密钥。
+- 新增 `deepseek_planner` ROS2 node。
+- LLM 输出中的 `context` 被主动丢弃；recipient_age、object_tags、forbidden_zones 等安全上下文不允许由 LLM 自证。
+- manipulation (`pick/place/handover`) 在没有 `safety_context_trusted=true` 时直接 fail-closed，后续由可信世界状态/记忆模块补齐。
+
+### 测试
+- Planner parser 新增 5 个测试：正常导航、Markdown JSON、丢弃 LLM safety context、拒绝低层控制、缺少必填参数。
+- 总单元测试：13/13 passed。
+- 无 `DEEPSEEK_API_KEY` 实测：节点发布 `NO_API_KEY` 并且不产生 ActionProposal。

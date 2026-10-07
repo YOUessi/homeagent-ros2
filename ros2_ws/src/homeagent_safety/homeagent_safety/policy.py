@@ -54,10 +54,20 @@ def evaluate_action(proposal: Dict[str, Any]) -> Decision:
         if target in forbidden:
             return _reject("FORBIDDEN_ZONE", f"target zone '{target}' is forbidden")
 
-    if action in {"pick", "handover"}:
+    if action in {"pick", "handover", "place"}:
         obj = params.get("object")
         if not isinstance(obj, str) or not obj:
             return _reject("MISSING_OBJECT", f"{action} requires params.object")
+        if context.get("safety_context_trusted") is not True:
+            return _reject(
+                "UNTRUSTED_SAFETY_CONTEXT",
+                f"{action} requires trusted world-state safety context",
+            )
+
+    if action == "place":
+        target = params.get("target")
+        if not isinstance(target, str) or not target:
+            return _reject("MISSING_TARGET", "place requires params.target")
 
     if action == "handover":
         tags = set(params.get("object_tags") or []) | set(context.get("object_tags") or [])

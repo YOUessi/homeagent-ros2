@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "mock_planner = homeagent_orchestrator.mock_planner_node:main",
+            "deepseek_planner = homeagent_orchestrator.deepseek_planner_node:main",
         ],
     },
 )

@@ -30,7 +30,7 @@ def test_sharp_object_to_minor_is_rejected():
         {
             "action": "handover",
             "params": {"object": "kitchen_knife", "object_tags": ["sharp"]},
-            "context": {"recipient_age": 10},
+            "context": {"recipient_age": 10, "safety_context_trusted": True},
         }
     )
     assert not decision.allowed
@@ -47,3 +47,15 @@ def test_emergency_stop_blocks_motion():
     )
     assert not decision.allowed
     assert decision.code == "E_STOP_ACTIVE"
+
+
+def test_manipulation_requires_trusted_safety_context():
+    decision = evaluate_action(
+        {
+            "action": "pick",
+            "params": {"object": "cup"},
+            "context": {},
+        }
+    )
+    assert not decision.allowed
+    assert decision.code == "UNTRUSTED_SAFETY_CONTEXT"

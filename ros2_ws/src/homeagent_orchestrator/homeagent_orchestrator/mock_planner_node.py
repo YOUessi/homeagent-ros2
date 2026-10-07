@@ -56,7 +56,7 @@ class MockPlannerNode(Node):
                     "object_tags": ["sharp"],
                     "recipient": "child",
                 },
-                {"recipient_age": 10},
+                {"recipient_age": 10, "safety_context_trusted": True},
             )
 
         if "客厅" in text:
