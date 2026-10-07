@@ -37,6 +37,9 @@ SkillResult -> Agent feedback loop
 - `homeagent_orchestrator`：主脑调度骨架、可重复 mock planner，以及 DeepSeek 高层动作规划器。
 - `homeagent_skills`：安全门之后的技能执行适配层；当前为 mock，后续替换为 Nav2 / MoveIt2。
 - `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
+- `homeagent_description`：自研 HomeBot 差速底盘、LiDAR、Camera 与家庭房间 Gazebo 模型。
+- `homeagent_navigation`：SLAM Toolbox / Nav2 配置与仿真导航入口。
+- `homeagent_bringup`：核心服务一键启动与 planner 切换。
 
 ## 仓库结构
 
@@ -68,7 +71,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 `colcon build` 已通过 5 个 package，Safety + Memory + Planner 单元测试 13/13 通过。
+当前 workspace 已有 8 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner 单元测试 13/13 通过。Gazebo/SLAM 运行时依赖正在隔离 Docker 环境中验证。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 

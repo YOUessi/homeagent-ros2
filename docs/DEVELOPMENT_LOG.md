@@ -94,3 +94,21 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - Planner parser 新增 5 个测试：正常导航、Markdown JSON、丢弃 LLM safety context、拒绝低层控制、缺少必填参数。
 - 总单元测试：13/13 passed。
 - 无 `DEEPSEEK_API_KEY` 实测：节点发布 `NO_API_KEY` 并且不产生 ActionProposal。
+
+## 2026-10-07 — Phase 0.5: 机器人模型、家庭场景与 SLAM 骨架
+
+### 实现
+- 新增 `homeagent_description`：自研 HomeBot 差速移动底盘。
+- 机器人模型包含左右驱动轮、caster、2D LiDAR、前向 RGB Camera。
+- 加入 Gazebo diff-drive、ray sensor、camera 插件。
+- 新增 `home_room.world`：6m x 6m 家庭房间，包含墙体、沙发、桌子、柜体障碍物。
+- 新增 headless `homebot_gazebo.launch.py`，用于自动化 CI/远程测试。
+- 新增 `homeagent_navigation`，接入 SLAM Toolbox 参数和仿真 SLAM 启动文件。
+- 新增 `homeagent_bringup`，可一键启动 safety / memory / skills / mock-or-DeepSeek planner。
+- 新增 Gazebo smoke test：要求 `/scan` 有有效测距且 `/cmd_vel` 能产生可观测里程计位移。
+
+### 当前验证
+- workspace HomeAgent package 数：8。
+- 8/8 package `colcon build --symlink-install` 通过。
+- `homeagent_core.launch.py` 已实测：四个核心 node 正常拉起，`去客厅` 完成 proposal -> safety -> skill -> result 闭环，launch 退出后无残留节点。
+- Gazebo/SLAM 运行时验证等待 Docker 完整依赖镜像构建完成后执行；主机不使用 sudo 安装，保持宿主环境不污染。

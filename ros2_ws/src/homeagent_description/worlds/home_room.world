@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="home_room">
+    <gravity>0 0 -9.81</gravity>
+    <physics type="ode">
+      <real_time_update_rate>1000</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+    </physics>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="north_wall">
+      <static>true</static>
+      <pose>0 3 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>6 0.12 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>6 0.12 1.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="south_wall">
+      <static>true</static>
+      <pose>0 -3 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>6 0.12 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>6 0.12 1.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="east_wall">
+      <static>true</static>
+      <pose>3 0 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.12 6 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.12 6 1.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="west_wall">
+      <static>true</static>
+      <pose>-3 0 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.12 6 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.12 6 1.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="sofa_block">
+      <static>true</static>
+      <pose>-1.45 1.0 0.32 0 0 0.2</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.5 0.65 0.64</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.5 0.65 0.64</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="table_block">
+      <static>true</static>
+      <pose>1.25 0.9 0.38 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.0 0.7 0.76</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.0 0.7 0.76</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name="cabinet_block">
+      <static>true</static>
+      <pose>1.9 -1.65 0.6 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.7 0.45 1.2</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.7 0.45 1.2</size></box></geometry></visual>
+      </link>
+    </model>
+  </world>
+</sdf>
