@@ -63,8 +63,30 @@ def main() -> None:
   </joint>
 '''
 
+    preserve_gripper_links = '''
+  <gazebo reference="tool_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+  <gazebo reference="gripper_fixed_finger_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+'''
+
     # Gazebo owns HomeArm's ros2_control hardware in this combined model.
     gazebo_control = '''
+  <gazebo reference="gripper_fixed_finger_link">
+    <mu1>10.0</mu1>
+    <mu2>10.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+  <gazebo reference="gripper_finger_link">
+    <mu1>10.0</mu1>
+    <mu2>10.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+
   <gazebo>
     <plugin name="homearm_gazebo_ros2_control" filename="libgazebo_ros2_control.so">
       <parameters>$(arg controllers_file)</parameters>
@@ -77,6 +99,18 @@ def main() -> None:
       <update_rate>30</update_rate>
       <joint_name>left_wheel_joint</joint_name>
       <joint_name>right_wheel_joint</joint_name>
+    </plugin>
+
+    <plugin name="homeagent_contact_grasp" filename="libhomeagent_contact_grasp_plugin.so">
+      <target_model>physical_cup</target_model>
+      <target_link>link</target_link>
+      <attach_link>tool_link</attach_link>
+      <fixed_finger_token>gripper_fixed_finger_link</fixed_finger_token>
+      <moving_finger_token>gripper_finger_link</moving_finger_token>
+      <gripper_joint>gripper_joint</gripper_joint>
+      <close_threshold>0.008</close_threshold>
+      <open_threshold>0.020</open_threshold>
+      <contact_window_sec>0.20</contact_window_sec>
     </plugin>
   </gazebo>
 '''
@@ -95,6 +129,8 @@ def main() -> None:
 {bot_inner}
 
 {arm_inner}
+
+{preserve_gripper_links}
 
 {gazebo_control}
 </robot>

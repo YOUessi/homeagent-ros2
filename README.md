@@ -79,7 +79,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 10 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、SLAM、Memory-backed Nav2 真导航、HomeArm MoveIt2 + gripper，以及 `gazebo_ros2_control/GazeboSystem` 物理机械臂关节执行均已验证。当前还已完成同一 ROS graph 下的 mobile-manipulator 联合 Demo：`去客厅 → Nav2 真移动 → 拿水杯 → MoveIt2 approach → gripper close → PlanningScene logical attach`。需要严格区分：机械臂关节物理动力学已经验证，但对真实 Gazebo 物体的接触抓取仍未验证，因此抓取结果仍标记 `physical_grasp=false`。
+当前 workspace 已有 11 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context + trusted navigation/manipulation 单元测试 31/31 通过。Gazebo HomeBot、SLAM、Memory-backed Nav2 真导航、HomeArm MoveIt2 + gripper，以及 `gazebo_ros2_control/GazeboSystem` 物理机械臂关节执行均已验证。当前还完成了同一 ROS graph 下的 mobile-manipulator 联合 Demo：`去客厅 → Nav2 真移动 → 拿水杯 → MoveIt2 approach → gripper close → PlanningScene logical attach`。此外新增 Gazebo 双指接触门控抓持插件：只有两个夹爪手指都与目标物发生真实 Gazebo contact 且夹爪达到闭合阈值后，才建立 Gazebo fixed constraint 并执行 carry。它不使用 MoveIt PlanningScene attach，但仍应严格表述为“contact-gated physical constraint”，而不是纯摩擦维持抓取；自主桌面抓取仍未完成。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -117,3 +117,7 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 `demo_nav2.sh` 会额外生成 `artifacts/nav2_demo_path.png`、机器可读 JSON 和完整运行日志；所有运行产物默认被 Git 忽略。
 
 开发过程按日期记录在 `docs/journal/YYYY-MM-DD.md`；`docs/DEVELOPMENT_LOG.md` 只保留阶段摘要。每天必须记录实际过程、验证结果、失败、问题定位与修复，不把“代码已写”混同为“已验证通过”。
+
+### Gazebo 接触门控约束 Demo
+
+运行 `./scripts/demo_gazebo_contact_grasp.sh`。该实验要求两个夹爪手指都与目标杯子产生 Gazebo contact，并在夹爪达到闭合阈值后建立 Gazebo fixed constraint，再执行 carry。它不使用 MoveIt PlanningScene attach；同时明确不是纯摩擦维持，也不是自主桌面抓取。

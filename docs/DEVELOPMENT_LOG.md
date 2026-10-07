@@ -213,3 +213,7 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 仍不把 PlanningScene logical attach 视为物理抓取；Gazebo 真实物体接触抓取是下一阶段。
 
 详细数据、失败过程与修复记录见 `docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.8: Gazebo 接触门控物理约束
+
+新增 `homeagent_gazebo_plugins`，通过 Gazebo contact manager 验证双指接触后再建立物理 fixed constraint。最终 demo 中目标随 tool 在 world 中移动约 0.20m，相对漂移约 0.05mm，且未使用 MoveIt PlanningScene attach。该结果严格标记为 contact-gated constraint，不声称纯摩擦自主抓取。详细过程见 `docs/journal/2026-10-07.md`。

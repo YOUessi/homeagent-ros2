@@ -25,6 +25,7 @@ docker run --rm \
       --install-base /tmp/homeagent_physics_colcon/install \
       --symlink-install
     source /tmp/homeagent_physics_colcon/install/setup.bash
+    export GAZEBO_PLUGIN_PATH="/tmp/homeagent_physics_colcon/install/homeagent_gazebo_plugins/lib:${GAZEBO_PLUGIN_PATH:-}"
 
     timeout 70 ros2 launch homeagent_manipulation \
       homebot_arm_gazebo_moveit.launch.py \
