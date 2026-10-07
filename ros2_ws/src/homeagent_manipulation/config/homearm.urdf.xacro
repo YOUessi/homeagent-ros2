@@ -4,9 +4,9 @@
   <material name="blue"><color rgba="0.12 0.35 0.75 1"/></material>
   <material name="orange"><color rgba="0.9 0.45 0.08 1"/></material>
 
-  <link name="base_footprint"/>
+  <link name="arm_base_footprint"/>
 
-  <link name="base_link">
+  <link name="arm_base_link">
     <visual>
       <origin xyz="0 0 0.04"/>
       <geometry><cylinder radius="0.11" length="0.08"/></geometry>
@@ -23,9 +23,9 @@
     </inertial>
   </link>
 
-  <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_link"/>
+  <joint name="arm_base_footprint_joint" type="fixed">
+    <parent link="arm_base_footprint"/>
+    <child link="arm_base_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
@@ -47,7 +47,7 @@
   </link>
 
   <joint name="joint1" type="revolute">
-    <parent link="base_link"/>
+    <parent link="arm_base_link"/>
     <child link="shoulder_link"/>
     <origin xyz="0 0 0.08" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>

@@ -186,3 +186,18 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 明确保留 `physical_grasp=false` / `grasp_complete=false`，当前仍是 GenericSystem 控制器级仿真。
 
 详细数据见 `docs/journal/2026-10-07.md`。
+
+## 2026-10-07 — Phase 1.6: Integrated Mobile Manipulator
+
+- HomeArm root frames 改为 `arm_base_footprint / arm_base_link`，消除与 HomeBot 的 TF 名称冲突。
+- HomeArm `robot_description` topic 隔离到 `/homearm/robot_description`。
+- 新增 `base_link -> arm_base_footprint` 0.22m mount TF。
+- HomeArm MoveIt2 支持 `use_sim_time`，联合模式与 Gazebo/Nav2 使用同一 clock。
+- 新增一键 integrated bringup 与 polished demo。
+- 同一 ROS graph 连续实测：
+  - 去客厅：Nav2 实际位移约 0.5926m。
+  - 拿水杯：MoveIt2 + gripper + planning-scene attach 成功。
+- 统一验收 `DEMO PASS=true`。
+- 当前为控制/规划级 mobile manipulator；HomeArm 物理动力学挂载仍是后续任务。
+
+详细数据见 `docs/journal/2026-10-07.md`。

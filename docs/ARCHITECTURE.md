@@ -138,3 +138,35 @@ SkillResult / observation_(t+1)
 4. 只有 `action_approved` 能进入技能层；技能层再次检查 `allowed`，双重 fail-closed。
 5. 仿真先行，真机与仿真保持同一 skill contract。
 6. 每个关键请求都有 request id、结果码、执行反馈和日志。
+
+## 5. Mobile Manipulator 联合拓扑
+
+当前联合 Demo 使用同一 ROS graph：
+
+```text
+map
+ └─ odom
+     └─ base_footprint
+         └─ base_link
+             └─ arm_base_footprint   (static mount, z=0.22m)
+                 └─ arm_base_link
+                     └─ ... HomeArm ... -> tool_link
+```
+
+HomeBot 与 HomeArm 不再共享 root frame 名称；HomeArm 的 robot description topic 隔离为：
+
+```text
+/homearm/robot_description
+```
+
+联合运行时：
+
+```text
+HomeBot Gazebo / Nav2 / AMCL
+        +
+HomeArm MoveIt2 / ros2_control / gripper
+        +
+HomeAgent Context / Safety / Nav2Skill / MoveItSkill
+```
+
+当前 arm 与 base 的关系在 TF、规划和控制层已经连通；但 HomeArm 仍由 GenericSystem 驱动，尚未作为 Gazebo 动力学实体挂在 HomeBot 上。因此当前属于**控制/规划级 mobile-manipulator integration**，不是完整物理级联合仿真。
