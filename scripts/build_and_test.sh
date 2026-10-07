@@ -10,4 +10,5 @@ source install/setup.bash
 PYTHONNOUSERSITE=1 python3 -m pytest -q \
   src/homeagent_safety/test/test_policy.py \
   src/homeagent_memory/test/test_store.py \
-  src/homeagent_orchestrator/test/test_planner_core.py
+  src/homeagent_orchestrator/test/test_planner_core.py \
+  src/homeagent_context/test/test_resolver.py

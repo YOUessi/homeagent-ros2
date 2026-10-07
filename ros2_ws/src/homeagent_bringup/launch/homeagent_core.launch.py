@@ -7,6 +7,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
+    use_nav2 = LaunchConfiguration("use_nav2")
     memory_db = LaunchConfiguration("memory_db")
 
     return LaunchDescription(
@@ -17,6 +18,11 @@ def generate_launch_description():
                 description="Use DeepSeek planner instead of deterministic mock planner.",
             ),
             DeclareLaunchArgument(
+                "use_nav2",
+                default_value="false",
+                description="Use Nav2-backed navigation skill executor.",
+            ),
+            DeclareLaunchArgument(
                 "memory_db",
                 default_value="/tmp/homeagent_memory.sqlite3",
                 description="SQLite path for household memory.",
@@ -25,6 +31,12 @@ def generate_launch_description():
                 package="homeagent_safety",
                 executable="safety_node",
                 name="homeagent_safety",
+                output="screen",
+            ),
+            Node(
+                package="homeagent_context",
+                executable="context_node",
+                name="homeagent_context",
                 output="screen",
             ),
             Node(
@@ -39,6 +51,14 @@ def generate_launch_description():
                 executable="mock_skill_executor",
                 name="homeagent_skill_executor",
                 output="screen",
+                condition=UnlessCondition(use_nav2),
+            ),
+            Node(
+                package="homeagent_skills",
+                executable="nav2_skill_executor",
+                name="homeagent_skill_executor",
+                output="screen",
+                condition=IfCondition(use_nav2),
             ),
             Node(
                 package="homeagent_orchestrator",

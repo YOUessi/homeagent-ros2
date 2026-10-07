@@ -42,7 +42,7 @@ class DeepSeekPlannerNode(Node):
             String, "/homeagent/user_command", self._on_command, 10
         )
         self._proposal_pub = self.create_publisher(
-            ActionProposal, "/homeagent/action_proposal", 10
+            ActionProposal, "/homeagent/action_candidate", 10
         )
         self._planner_error_pub = self.create_publisher(
             String, "/homeagent/planner_error", 10

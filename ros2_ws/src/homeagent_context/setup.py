@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = "homeagent_skills"
+package_name = "homeagent_context"
 
 setup(
     name=package_name,
@@ -14,13 +14,12 @@ setup(
     zip_safe=True,
     maintainer="YOUessi",
     maintainer_email="723911823@qq.com",
-    description="High-level robot skill execution adapters for HomeAgent.",
+    description="Trusted world-state context resolver for HomeAgent safety gating.",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "mock_skill_executor = homeagent_skills.mock_skill_executor:main",
-            "nav2_skill_executor = homeagent_skills.nav2_skill_executor:main",
+            "context_node = homeagent_context.context_node:main",
         ],
     },
 )

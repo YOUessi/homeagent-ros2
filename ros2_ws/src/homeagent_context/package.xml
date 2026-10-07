@@ -1,16 +1,14 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>homeagent_skills</name>
+  <name>homeagent_context</name>
   <version>0.1.0</version>
-  <description>High-level robot skill adapters for HomeAgent.</description>
+  <description>Trusted world-state context resolver for HomeAgent safety gating.</description>
   <maintainer email="723911823@qq.com">YOUessi</maintainer>
   <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>homeagent_interfaces</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-  <exec_depend>nav2_msgs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

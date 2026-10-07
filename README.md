@@ -13,6 +13,12 @@ User / Voice / Vision
   Agent Planner
         |
         v
+ Action Candidate
+        |
+        v
+ Trusted Context Resolver
+        |
+        v
  ActionProposal (typed ROS2 msg)
         |
         v
@@ -35,7 +41,8 @@ SkillResult -> Agent feedback loop
 - `homeagent_interfaces`：强类型 ROS2 消息/服务协议。
 - `homeagent_safety`：动作白名单、急停、禁区、危险物品/人员规则。
 - `homeagent_orchestrator`：主脑调度骨架、可重复 mock planner，以及 DeepSeek 高层动作规划器。
-- `homeagent_skills`：安全门之后的技能执行适配层；当前为 mock，后续替换为 Nav2 / MoveIt2。
+- `homeagent_context`：把不可信 Agent candidate 与家庭档案/策略合并为可信 world-state safety context。
+- `homeagent_skills`：安全门之后的技能执行适配层；已有 mock 与 Nav2 adapter，后续增加 MoveIt2。
 - `homeagent_memory`：SQLite 家庭档案、物品/人员记忆、观测日志与人工纠正权重。
 - `homeagent_description`：自研 HomeBot 差速底盘、LiDAR、Camera 与家庭房间 Gazebo 模型。
 - `homeagent_navigation`：SLAM Toolbox / Nav2 配置与仿真导航入口。
@@ -71,7 +78,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 已有 8 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner 单元测试 13/13 通过。Gazebo/SLAM 运行时依赖正在隔离 Docker 环境中验证。
+当前 workspace 已有 9 个 HomeAgent ROS2 package，`colcon build` 全部通过；Safety + Memory + Planner + Context 单元测试 17/17 通过。Gazebo/SLAM/Nav2 运行时依赖正在隔离 Docker 环境中验证。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 

@@ -112,3 +112,27 @@ Tang 主机没有 passwordless sudo，因此不直接修改系统 ROS 安装。�
 - 8/8 package `colcon build --symlink-install` 通过。
 - `homeagent_core.launch.py` 已实测：四个核心 node 正常拉起，`去客厅` 完成 proposal -> safety -> skill -> result 闭环，launch 退出后无残留节点。
 - Gazebo/SLAM 运行时验证等待 Docker 完整依赖镜像构建完成后执行；主机不使用 sudo 安装，保持宿主环境不污染。
+
+## 2026-10-07 — Phase 0.6: 可信世界状态边界 + Nav2 技能适配器
+
+### 可信上下文
+- 新增 `homeagent_context`，将 Agent 的 `/homeagent/action_candidate` 与家庭档案/固定策略合并后，才生成 `/homeagent/action_proposal`。
+- LLM 不再有能力自行声明 `recipient_age`、`object_tags`、`forbidden_zones` 或 `safety_context_trusted`。
+- manipulation 对象不存在家庭记忆时 fail-closed；已知对象才可进入安全引擎继续判定。
+- forbidden zone 来自 context node 的可信策略参数，而不是 Agent 输出。
+
+### 端到端验证
+- 已知 `cup` 写入 memory 后：`pick(cup)` -> Context trusted=True -> Safety ALLOW -> mock skill 完成。
+- 未知对象：Context trusted=False -> Safety `UNTRUSTED_SAFETY_CONTEXT`，不会进入 skill executor。
+- `utility_room`：Context 从策略注入 forbidden zone -> Safety `FORBIDDEN_ZONE`，3 秒观察窗口内没有任何 skill result。
+- `demo_core.sh` 已更新为完整 candidate -> context -> safety -> skill -> feedback 演示。
+
+### Nav2 adapter
+- 新增 `nav2_skill_executor`，只消费 Safety APPROVED 的 `navigate` 动作。
+- semantic target 转为 `NavigateToPose` map-frame goal；当前内置 living_room / kitchen / bedroom / hallway 坐标。
+- Nav2 server 不可用、目标未知、goal rejected、执行失败均显式返回 `SkillResult`，Agent 不直接发布 `/cmd_vel`。
+
+### 回归
+- workspace package 数：9。
+- `colcon build`：9/9 成功。
+- 单元测试：17/17 passed。

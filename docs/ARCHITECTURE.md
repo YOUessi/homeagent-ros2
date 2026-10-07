@@ -99,7 +99,13 @@ SkillResult
 observation_t
     |
     v
-Agent -> ActionProposal
+Agent -> ActionCandidate (untrusted)
+    |
+    v
+Trusted Context Resolver <- household memory / policy
+    |
+    v
+ActionProposal + trusted context
     |
     v
 Safety policy(state_t, action_t)

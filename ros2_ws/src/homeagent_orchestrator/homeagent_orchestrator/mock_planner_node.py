@@ -17,7 +17,7 @@ class MockPlannerNode(Node):
             String, "/homeagent/user_command", self._on_command, 10
         )
         self._proposal_pub = self.create_publisher(
-            ActionProposal, "/homeagent/action_proposal", 10
+            ActionProposal, "/homeagent/action_candidate", 10
         )
         self._approved_sub = self.create_subscription(
             SafetyDecision, "/homeagent/action_approved", self._on_approved, 10
