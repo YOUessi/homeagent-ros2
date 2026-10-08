@@ -233,6 +233,18 @@ def main():
                 finger=name in FINGERS,
             )
 
+    # Native Gazebo diagnostic: visible primitive bodies that move with each
+    # physical Panda link even if Collada CAD cannot render in this client.
+    # The official visual mesh is kept as-is for CAD-capable viewers.
+    for idx in range(1, 8):
+        link = root.find(f"./link[@name='panda_link{idx}']")
+        visual = sub(link, "visual", name=f"panda_link{idx}_diagnostic_body")
+        sub(visual, "origin", xyz="0 0 0.045", rpy="0 0 0")
+        geom = sub(visual, "geometry")
+        sub(geom, "cylinder", radius="0.052", length="0.14")
+        material = sub(visual, "material", name=f"panda_diag_color_{idx}")
+        sub(material, "color", rgba=("0.93 0.93 0.90 1" if idx % 2 else "0.22 0.25 0.30 1"))
+
     if args.mount == "fixed_base":
         sub(root, "link", name="world")
         anchor = sub(root, "joint", name="panda_world_fixed", type="fixed")
