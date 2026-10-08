@@ -16,7 +16,9 @@ docker run -d --name homeagent-panda-live --network host --ipc host \
   -v "$ROOT:/workspace" --entrypoint bash homeagent-ros2:panda-visual -lc '
   set -e
   source /opt/ros/humble/setup.bash
-  source /tmp/ha_panda_mobile/install/setup.bash
+  cd /workspace/ros2_ws
+  colcon --log-base /tmp/panda_live_colcon/log build --packages-select homeagent_manipulation homeagent_description --build-base /tmp/panda_live_colcon/build --install-base /tmp/panda_live_colcon/install --symlink-install > /workspace/artifacts/panda_live/build.log 2>&1
+  source /tmp/panda_live_colcon/install/setup.bash
   exec ros2 launch homeagent_manipulation panda_gazebo_physics.launch.py \
     > /workspace/artifacts/panda_live/launch.log 2>&1
 '
