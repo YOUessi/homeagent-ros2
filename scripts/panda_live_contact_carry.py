@@ -8,7 +8,7 @@ No autonomous visual localization and no friction-only claim.
 """
 import json, math, os, time
 import rclpy
-from gazebo_msgs.srv import SpawnEntity, GetEntityState, SetLinkProperties
+from gazebo_msgs.srv import SpawnEntity, GetEntityState, GetLinkState, SetLinkProperties
 from panda_gazebo_physics_e2e import PhysicalPandaProbe
 from panda_moveit_joint_demo import READY, INSPECT
 
@@ -49,16 +49,19 @@ def main():
         spawn=node.create_client(SpawnEntity,"/spawn_entity")
         get=node.create_client(GetEntityState,"/gazebo/get_entity_state")
         props=node.create_client(SetLinkProperties,"/gazebo/set_link_properties")
+        link_get=node.create_client(GetLinkState,"/gazebo/get_link_state")
         node.wait_ready()
         report["ready_code"]=node.initialize_ready()
         report["open"]=node.set_gripper(0.035)
         request=SpawnEntity.Request()
         request.name="panda_grasp_cup";request.xml=CUP
         request.reference_frame="world"
-        hand_req=GetEntityState.Request()
-        hand_req.name="homebot_panda::panda_hand"
+        hand_req=GetLinkState.Request()
+        hand_req.link_name="homebot_panda::panda_hand"
         hand_req.reference_frame="world"
-        hand_pose=call(node,get,hand_req).state.pose
+        hand_response=call(node,link_get,hand_req)
+        if not hand_response.success: raise RuntimeError("hand link unavailable")
+        hand_pose=hand_response.link_state.pose
         q=hand_pose.orientation
         # Rotate local [0,0,0.088] into world using unit quaternion.
         rotated=[2*(q.x*q.z+q.w*q.y)*0.088,
@@ -73,6 +76,12 @@ def main():
         report["close"]=node.set_gripper(0.005)
         time.sleep(0.5)
         def pose(ref):
+            if ref=="homebot_panda::panda_hand":
+                req=GetLinkState.Request()
+                req.link_name=ref;req.reference_frame="world"
+                result=call(node,link_get,req)
+                if not result.success: raise RuntimeError("hand link pose failed")
+                return xyz(result.link_state.pose)
             req=GetEntityState.Request()
             req.name=ref;req.reference_frame="world"
             result=call(node,get,req)
