@@ -8,7 +8,7 @@ No autonomous visual localization and no friction-only claim.
 """
 import json, math, os, time
 import rclpy
-from gazebo_msgs.srv import SpawnEntity, GetEntityState, SetLinkProperties
+from gazebo_msgs.srv import SpawnEntity, GetEntityState
 from gazebo_msgs.msg import LinkStates
 from panda_gazebo_physics_e2e import PhysicalPandaProbe
 from panda_moveit_joint_demo import READY, INSPECT
@@ -49,7 +49,6 @@ def main():
     try:
         spawn=node.create_client(SpawnEntity,"/spawn_entity")
         get=node.create_client(GetEntityState,"/gazebo/get_entity_state")
-        props=node.create_client(SetLinkProperties,"/gazebo/set_link_properties")
         observed_links={}
         def links_cb(msg):
             observed_links.update(dict(zip(msg.name,msg.pose)))
@@ -98,14 +97,9 @@ def main():
         before_rel=[a-b for a,b in zip(before_world,before_hand)]
         report["before_world"]=before_world
         report["before_relative"]=before_rel
-        # Enable gravity for the subsequent physical lift test.
-        r=SetLinkProperties.Request()
-        r.link_name="panda_grasp_cup::link"
-        r.gravity_mode=True;r.mass=0.045
-        r.ixx=0.000014;r.iyy=0.000014;r.izz=0.000008
-        changed=call(node,props,r)
-        if not changed.success: raise RuntimeError("gravity enable failed: "+changed.status_message)
-        report["gravity_enabled_for_lift"]=True
+        # Gazebo model plugin enables target gravity in AttachTarget() ONLY
+        # if both finger contacts triggered a real fixed-constraint grasp.
+        report["gravity_transition"]="contact plugin on successful bilateral ATTACHED event"
         report["lift"]=node.move_to(INSPECT,"panda_cup_lift")
         time.sleep(0.6)
         after_world=pose("panda_grasp_cup")
