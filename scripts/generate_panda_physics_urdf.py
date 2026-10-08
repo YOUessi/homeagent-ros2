@@ -293,6 +293,7 @@ def main():
             ("close_threshold", "0.012"),
             ("open_threshold", "0.030"),
             ("contact_window_sec", "0.5"),
+            ("enable_gravity_on_attach", "true"),
         ):
             sub(grasp, key).text = value
 
