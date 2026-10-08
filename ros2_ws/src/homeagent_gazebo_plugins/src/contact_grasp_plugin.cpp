@@ -31,6 +31,8 @@ public:
     this->close_threshold_ = GetDouble(sdf, "close_threshold", 0.008);
     this->open_threshold_ = GetDouble(sdf, "open_threshold", 0.020);
     this->contact_window_sec_ = GetDouble(sdf, "contact_window_sec", 0.20);
+    this->enable_gravity_on_attach_ =
+      GetString(sdf, "enable_gravity_on_attach", "false") == "true";
 
     auto * contact_manager = this->world_->Physics()->GetContactManager();
     if (contact_manager)
@@ -143,6 +145,11 @@ private:
       return;
 
     this->grasp_joint_->Init();
+    if (this->enable_gravity_on_attach_)
+    {
+      child_link->SetGravityMode(true);
+      gzmsg << "[HomeAgentContactGrasp] gravity enabled on attached target\n";
+    }
     this->attached_ = true;
 
     gzmsg << "[HomeAgentContactGrasp] ATTACHED target="
@@ -180,6 +187,7 @@ private:
   double open_threshold_{0.020};
   double contact_window_sec_{0.20};
   bool attached_{false};
+  bool enable_gravity_on_attach_{false};
   common::Time last_fixed_contact_;
   common::Time last_moving_contact_;
 };
