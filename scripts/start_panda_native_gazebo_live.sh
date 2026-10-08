@@ -26,17 +26,17 @@ docker run -d --name homeagent-panda-3d --network host --ipc host \
   -e TAILSCALE_IP="$TS_IP" -v "$ROOT:/workspace" \
   --entrypoint bash homeagent-ros2:panda-visual -lc '
   set -e
-  export DISPLAY=:98 GAZEBO_MASTER_URI=http://127.0.0.1:11380
+  export DISPLAY=:97 GAZEBO_MASTER_URI=http://127.0.0.1:11380
   export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
   export XDG_RUNTIME_DIR=/tmp/runtime-panda
   mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
-  Xvfb :98 -screen 0 1920x1080x24 +extension GLX +render -noreset > /workspace/artifacts/panda_live/xvfb.log 2>&1 &
+  Xvfb :97 -screen 0 1920x1080x24 +extension GLX +render -noreset > /workspace/artifacts/panda_live/xvfb.log 2>&1 &
   sleep 2
   fluxbox > /workspace/artifacts/panda_live/fluxbox.log 2>&1 &
-  x11vnc -display :98 -localhost -rfbport 5906 -nopw -forever -shared -noxdamage -quiet > /workspace/artifacts/panda_live/vnc.log 2>&1 &
-  websockify --web /usr/share/novnc "$TAILSCALE_IP":6081 127.0.0.1:5906 > /workspace/artifacts/panda_live/websockify.log 2>&1 &
+  x11vnc -display :97 -localhost -rfbport 5907 -nopw -forever -shared -noxdamage -quiet > /workspace/artifacts/panda_live/vnc.log 2>&1 &
+  websockify --web /usr/share/novnc "$TAILSCALE_IP":6082 127.0.0.1:5907 > /workspace/artifacts/panda_live/websockify.log 2>&1 &
   sleep 3
   gzclient --verbose > /workspace/artifacts/panda_live/gzclient.log 2>&1 &
   wait -n
 '
-echo "Live native Gazebo: http://$TS_IP:6081/vnc.html?autoconnect=true&resize=remote"
+echo "Live native Gazebo: http://$TS_IP:6082/vnc.html?autoconnect=true&resize=remote"
