@@ -1,0 +1,112 @@
+{
+  "robot": "homebot_panda, one Gazebo physics model",
+  "model_control": "PandaGazeboSystem; HomeBot Gazebo diff-drive",
+  "bootstrap_direct_controller_only": true,
+  "bootstrap_joint_error_rad": 3.516870570918762e-05,
+  "source_command_look_at": "机械臂检查一下",
+  "source_command_stow": "收拢机械臂",
+  "source_command_navigate": "去客厅",
+  "moveit_look_at_code": "MOVEIT_SUCCEEDED",
+  "moveit_look_at": {
+    "target_name": "inspect",
+    "source": "trusted_named_profile",
+    "joint_names": [
+      "panda_joint1",
+      "panda_joint2",
+      "panda_joint3",
+      "panda_joint4",
+      "panda_joint5",
+      "panda_joint6",
+      "panda_joint7"
+    ],
+    "joint_target": [
+      0.4,
+      -0.65,
+      0.18,
+      -2.2,
+      0.08,
+      1.82,
+      0.53
+    ],
+    "observed_joint_positions": [
+      0.40542878148148365,
+      -0.6634181023965855,
+      0.1654108640274936,
+      -2.1997058172313233,
+      0.08059909052337844,
+      1.834168868346886,
+      0.5271780977783553
+    ],
+    "max_abs_joint_error_rad": 0.014589135972506384,
+    "planned_points": 17,
+    "status": 4,
+    "moveit_error_code": 1,
+    "postcondition_verified": true
+  },
+  "arm_motion_l2_rad": 0.6108744531010394,
+  "stow_code": "MOVEIT_SUCCEEDED",
+  "stow_joint_max_error_rad": 0.013469219615186434,
+  "nonstowed_navigation_block": {
+    "action": "navigate",
+    "code": "PANDA_ARM_NOT_STOWED",
+    "success": false,
+    "safety_approved": true,
+    "physical_base_displacement_m": 0.0008475006465602211,
+    "passed": true
+  },
+  "navigation_code": "NAV2_SUCCEEDED",
+  "navigation": {
+    "target": "living_room",
+    "goal_xyyaw": [
+      0.8,
+      0.0,
+      0.0
+    ],
+    "target_source": "place_memory",
+    "status": 4,
+    "actual_map_pose": [
+      0.6869051705998324,
+      -0.025815530634857906,
+      0.14854768796592346
+    ],
+    "goal_position_error_m": 0.1160038019161972,
+    "attempts": 1,
+    "postcondition_verified": true
+  },
+  "initial_map_xy": [
+    -0.0014426825071868557,
+    -0.03420885101635791
+  ],
+  "initial_odom_xy": [
+    0.03357683778999132,
+    -0.03390799066779995
+  ],
+  "final_odom_xy": [
+    0.7162166559934814,
+    -0.018570450546397374
+  ],
+  "base_displacement_m": 0.6828120982626696,
+  "scan_samples": 360,
+  "model_roll_pitch_rad": [
+    1.5128757822025677e-06,
+    -0.038417865898052864
+  ],
+  "peak_abs_model_roll_pitch_rad": 0.0384935768540613,
+  "model_pose_samples": 920,
+  "safety_approvals_correlated": {
+    "look_at": true,
+    "stow_arm": true,
+    "navigate": true
+  },
+  "forbidden_zone_spoofing_probe": {
+    "request_id": "panda-forbidden-b87822f4cb",
+    "context_spoof_attempted": true,
+    "rejected": true,
+    "code": "FORBIDDEN_ZONE",
+    "illegal_skill_executed": false,
+    "base_drift_after_reject_m": 0.001844464103233519,
+    "passed": true
+  },
+  "grasp_tested": false,
+  "passed": true
+}

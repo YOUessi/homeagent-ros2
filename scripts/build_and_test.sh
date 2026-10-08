@@ -15,4 +15,7 @@ PYTHONNOUSERSITE=1 python3 -m pytest -q \
   src/homeagent_context/test/test_resolver.py \
   src/homeagent_skills/test/test_nav2_target.py \
   src/homeagent_skills/test/test_arm_targets.py \
+  src/homeagent_skills/test/test_panda_targets.py \
+  src/homeagent_skills/test/test_panda_stow_guard.py \
+  src/homeagent_navigation/test/test_panda_nav_params.py \
   src/homeagent_perception/test/test_observation.py

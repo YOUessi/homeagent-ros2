@@ -22,6 +22,7 @@ setup(
             "mock_skill_executor = homeagent_skills.mock_skill_executor:main",
             "nav2_skill_executor = homeagent_skills.nav2_skill_executor:main",
             "moveit_skill_executor = homeagent_skills.moveit_skill_executor:main",
+            "panda_moveit_skill_executor = homeagent_skills.panda_moveit_skill_executor:main",
             "gazebo_contact_pick_executor = homeagent_skills.gazebo_contact_pick_executor:main",
         ],
     },

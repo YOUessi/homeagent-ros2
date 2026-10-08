@@ -111,6 +111,64 @@ def add_control(root, controllers_yaml):
     # separation is validated via Gazebo GetEntityState instead.
 
 
+def configure_mobile_chassis(homebot):
+    """Panda-class demo chassis with a stable forward/rear support polygon.
+
+    The original lightweight HomeBot model remains unchanged. These are
+    explicit simulation prototype dimensions, not a fabricated production BOM.
+    """
+    chassis = homebot.find("./link[@name='base_link']")
+    inertia = chassis.find("inertial")
+    inertia.find("mass").set("value", "44.0")
+    moments = inertia.find("inertia")
+    moments.set("ixx", "0.99")
+    moments.set("iyy", "1.63")
+    moments.set("izz", "2.47")
+    for visual_or_collision in ("visual", "collision"):
+        body_size = chassis.find(f"./{visual_or_collision}/geometry/box")
+        if body_size is None:
+            raise ValueError("HomeBot body box geometry missing")
+        body_size.set("size", "0.62 0.49 0.16")
+
+    # Increase drive wheel separation, maintaining the original wheel radius.
+    for name, sign in (("left_wheel_joint", 1), ("right_wheel_joint", -1)):
+        joint = homebot.find(f"./joint[@name='{name}']")
+        joint.find("origin").set("xyz", f"0 {0.23*sign:.3f} -0.07")
+    for plugin in homebot.findall(".//plugin"):
+        if plugin.attrib.get("name") == "homebot_diff_drive":
+            wheel_separation = plugin.find("wheel_separation")
+            if wheel_separation is None:
+                raise ValueError("homebot_diff_drive wheel separation missing")
+            wheel_separation.text = "0.46"
+            plugin.find("max_wheel_acceleration").text = "1.2"
+
+    # Keep the existing low-friction rear caster, but shift it rearward.
+    rear = homebot.find("./joint[@name='caster_joint']")
+    rear.find("origin").set("xyz", "-0.26 0 -0.09")
+
+    # A second front contact point stops the front-heavy Panda from pitching
+    # into the floor when accelerating/stopping.
+    front = sub(homebot, "link", name="front_caster_link")
+    inertial = sub(front, "inertial")
+    sub(inertial, "mass", value="0.20")
+    sub(
+        inertial, "inertia",
+        ixx="0.0002", ixy="0", ixz="0",
+        iyy="0.0002", iyz="0", izz="0.0002",
+    )
+    visual = sub(front, "visual")
+    sub(sub(visual, "geometry"), "sphere", radius="0.035")
+    collision = sub(front, "collision")
+    sub(sub(collision, "geometry"), "sphere", radius="0.035")
+    joint = sub(homebot, "joint", name="front_caster_joint", type="fixed")
+    sub(joint, "parent", link="base_link")
+    sub(joint, "child", link="front_caster_link")
+    sub(joint, "origin", xyz="0.26 0 -0.09", rpy="0 0 0")
+    friction = sub(homebot, "gazebo", reference="front_caster_link")
+    sub(friction, "mu1").text = "0.05"
+    sub(friction, "mu2").text = "0.05"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True)
@@ -189,6 +247,20 @@ def main():
         for element in list(root):
             homebot.append(element)
 
+        # Only the two passive wheel joints are mirrored to /joint_states.
+        # Panda arm/finger state remains owned exclusively by ros2_control;
+        # never publish a competing second source for Panda joints.
+        wheel_gz = sub(homebot, "gazebo")
+        wheel_plugin = sub(
+            wheel_gz, "plugin", name="homebot_wheel_state",
+            filename="libgazebo_ros_joint_state_publisher.so",
+        )
+        wheel_ros = sub(wheel_plugin, "ros")
+        sub(wheel_ros, "remapping").text = "~/out:=joint_states"
+        sub(wheel_plugin, "update_rate").text = "30"
+        sub(wheel_plugin, "joint_name").text = "left_wheel_joint"
+        sub(wheel_plugin, "joint_name").text = "right_wheel_joint"
+
         mount = sub(
             homebot, "joint", name="homebot_panda_mount", type="fixed"
         )
@@ -196,14 +268,9 @@ def main():
         sub(mount, "child", link="panda_link0")
         sub(mount, "origin", xyz="-0.14 0 0.18", rpy="0 0 0")
 
-        # A Panda-class arm weighs significantly more than the original
-        # 12kg demonstration chassis. Use a heavier prototype chassis here;
-        # its stability is still subject to real Gazebo tests.
-        chassis = homebot.find("./link[@name='base_link']")
-        chassis.find("./inertial/mass").set("value", "28.0")
-        chassis.find("./inertial/inertia").set("ixx", "0.48")
-        chassis.find("./inertial/inertia").set("iyy", "0.65")
-        chassis.find("./inertial/inertia").set("izz", "0.75")
+        # Stabilize the mobile base for a Panda-class manipulator using
+        # a wider support polygon and mass-matched inertial tensor.
+        configure_mobile_chassis(homebot)
 
         root = homebot
         tree = ET.ElementTree(root)

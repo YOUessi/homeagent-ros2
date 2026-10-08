@@ -80,7 +80,7 @@ SkillResult -> Agent feedback loop
  -> 技能执行层没有收到动作
 ```
 
-当前 workspace 的 11 个非 Gazebo-plugin package 均可 `colcon build`，最新纯逻辑/策略回归为 52/52 passed；Docker 物理路径同时构建 `homeagent_gazebo_plugins`，共 12 packages。系统已验证 Gazebo HomeBot、SLAM、Perception → Household Memory、Memory-backed Nav2、HomeArm MoveIt2 + gripper、`gazebo_ros2_control/GazeboSystem`、Agent fetch 状态机以及双指 contact-gated grasp。`fetch(cup)` 现在由确定性状态机执行 `stow → navigate(object_pregrasp:cup) → pick → verify`，并带命令幂等、Safety rejection abort、Nav2 retry、pick recovery 与 postcondition verification。抓取阶段在 full carry 前必须先通过小幅 grasp proof motion；未确认抓持时 `carry_executed=false`。当前 Gazebo 抓持严格表述为“双指接触门控后建立 fixed constraint”，不是纯摩擦维持；完整自主桌面视觉抓取仍未完成。
+当前 workspace 的 11 个非 Gazebo-plugin package 均可 `colcon build`，最新纯逻辑/策略回归为 67/67 passed；Docker 物理路径同时构建 `homeagent_gazebo_plugins`，共 12 packages。系统已验证 Gazebo HomeBot、SLAM、Perception → Household Memory、Memory-backed Nav2、HomeArm MoveIt2 + gripper、`gazebo_ros2_control/GazeboSystem`、Agent fetch 状态机以及双指 contact-gated grasp。`fetch(cup)` 现在由确定性状态机执行 `stow → navigate(object_pregrasp:cup) → pick → verify`，并带命令幂等、Safety rejection abort、Nav2 retry、pick recovery 与 postcondition verification。抓取阶段在 full carry 前必须先通过小幅 grasp proof motion；未确认抓持时 `carry_executed=false`。当前 Gazebo 抓持严格表述为“双指接触门控后建立 fixed constraint”，不是纯摩擦维持；完整自主桌面视觉抓取仍未完成。
 
 DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代码、ROS topic 或日志；没有密钥时节点 fail-closed，只发布 `NO_API_KEY` 错误，不产生机器人动作。
 
@@ -136,4 +136,24 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 - 官方 **Franka Panda 7-DOF**：先构建 `docker/Dockerfile.visual` 与 `docker/Dockerfile.panda` 所对应镜像，再运行 `./scripts/start_panda_3d_demo.sh` 启动隔离的 RViz + MoveIt2 + ros2_control `mock_components` demo。浏览器连接地址由脚本打印；[真实 CAD Mesh 截图](docs/images/panda_rviz_20261008.png)。
 - Panda 的关节运动与夹爪开合可用 `docker exec homeagent-panda-demo bash -lc 'source /opt/ros/humble/setup.bash && python3 /workspace/scripts/panda_moveit_joint_demo.py'` 演示，MoveIt2 两次 15-point 规划执行及 gripper action 已实测通过。
 
-**验证边界**：Panda 当前是官方七轴网格 + MoveIt2 模拟关节控制，**尚未接入 GazeboSystem 物理关节和真实接触抓取**；原有 HomeArm Gazebo 物理控制与 Agent E2E 是另一套结构。替换模型必须单独验证控制器接口、Gazebo、Safety 和抓取，不可凭 RViz 画面宣称整个系统完成。
+**验证边界（已于 2026-10-08 更新）**：上方 Panda RViz 链接仍是模拟控制器展示；但新开发分支已额外完成 Panda 七轴 + 夹爪的真实 GazeboSystem 物理控制，以及与 HomeBot 底盘合并为单机器人后，受控的 Agent / Safety / Nav2 / MoveIt2 联合运动测试。**自主物品接触抓取仍未完成**。不要把 RViz 模拟控制器、Gazebo 物理运动、真实接触抓取混为一谈。
+
+
+## Panda + HomeBot 同体物理运动 / Agent 安全导航（2026-10-08，开发分支）
+
+本开发分支 feature/panda-gazebo-physics-20261008 在前述官方 Panda RViz 演示基础上，额外实现一个 Gazebo Classic 物理机器人 homebot_panda：HomeBot 底盘、两轮差速、激光雷达、里程计与官方 Panda 7 轴外观 Mesh、双指夹爪合并到**同一个机器人**。Panda 7 轴由 gazebo_ros2_control/GazeboSystem 和 MoveIt2 控制；不是 mock_components。
+
+单条复现入口（均在 Tang Docker 中运行，与主实时 Demo 的 ROS Domain 隔离）：
+
+~~~bash
+./scripts/build_and_test.sh
+./scripts/docker_panda_gazebo_physics_smoke.sh
+./scripts/docker_homebot_panda_smoke.sh
+./scripts/docker_panda_agent_nav_e2e.sh
+~~~
+
+其中 Agent 联合验收使用**确定性 mock planner**，按用户命令“机械臂检查一下 / 收拢机械臂 / 去客厅”逐一经过 Trusted Context → Safety Rule Engine → ROS2 Panda/导航 Skills。Panda 不收拢时不允许导航；禁区上下文伪造被拒绝。该验证**没有**宣称已经从桌面自主抓起杯子，也没有在线调用 DeepSeek 模型。
+
+最新有效 r9：11 packages build、67/67 pytest；MoveIt2 七轴实际运动约 0.611rad；Nav2 一次导航成功，底盘实际运动约 0.683m、定位目标误差 0.116m，0 次进度恢复；Panda 未收拢/禁区指令均阻断。DWB 局部规划器与 GoalChecker 的停车容差已同步为 0.12m，停止判定速度设为 0.05m/s。
+
+[完整过程与失败记录](docs/journal/2026-10-08.md) · [r9 端到端机器报告](docs/journal/traces/2026-10-08-panda-nav-e2e-r9.json) · [r8 问题遥测](docs/journal/traces/2026-10-08-nav2-telemetry-r8.json) · [r9 验收遥测](docs/journal/traces/2026-10-08-nav2-telemetry-r9.json)

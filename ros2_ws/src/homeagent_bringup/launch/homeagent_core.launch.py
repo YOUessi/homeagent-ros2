@@ -3,12 +3,26 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
     use_nav2 = LaunchConfiguration("use_nav2")
+    nav_require_panda_stow = LaunchConfiguration(
+        "nav_require_panda_stow"
+    )
+    nav_postcondition_tolerance_m = LaunchConfiguration(
+        "nav_postcondition_tolerance_m"
+    )
+    nav_false_success_max_retries = LaunchConfiguration(
+        "nav_false_success_max_retries"
+    )
+    nav_false_success_retry_delay_sec = LaunchConfiguration(
+        "nav_false_success_retry_delay_sec"
+    )
     use_moveit = LaunchConfiguration("use_moveit")
+    use_panda_moveit = LaunchConfiguration("use_panda_moveit")
     moveit_execute_pick = LaunchConfiguration("moveit_execute_pick")
     use_gazebo_contact_pick = LaunchConfiguration("use_gazebo_contact_pick")
     gazebo_contact_spawn_object = LaunchConfiguration(
@@ -25,6 +39,8 @@ def generate_launch_description():
             use_nav2,
             "'.lower() in ['true','1','yes'] or '",
             use_moveit,
+            "'.lower() in ['true','1','yes'] or '",
+            use_panda_moveit,
             "'.lower() in ['true','1','yes'] or '",
             use_gazebo_contact_pick,
             "'.lower() in ['true','1','yes']",
@@ -44,9 +60,37 @@ def generate_launch_description():
                 description="Enable the Nav2-backed navigation skill adapter.",
             ),
             DeclareLaunchArgument(
+                "nav_require_panda_stow",
+                default_value="false",
+                description=(
+                    "Require measured seven-axis Panda stow posture before "
+                    "allowing Nav2 to move the mobile base."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "nav_postcondition_tolerance_m",
+                default_value="0.30",
+                description="Position tolerance for Nav2 physical postcondition (meters).",
+            ),
+            DeclareLaunchArgument(
+                "nav_false_success_max_retries",
+                default_value="1",
+                description="Maximum bounded retries when Nav2 reports unverified success.",
+            ),
+            DeclareLaunchArgument(
+                "nav_false_success_retry_delay_sec",
+                default_value="0.5",
+                description="Delay before a verified-false-success Nav2 retry (seconds).",
+            ),
+            DeclareLaunchArgument(
                 "use_moveit",
                 default_value="false",
                 description="Enable the MoveIt2-backed HomeArm skill adapter.",
+            ),
+            DeclareLaunchArgument(
+                "use_panda_moveit",
+                default_value="false",
+                description="Enable seven-axis Panda MoveIt2 safe stow/look skill.",
             ),
             DeclareLaunchArgument(
                 "moveit_execute_pick",
@@ -118,7 +162,23 @@ def generate_launch_description():
                 executable="nav2_skill_executor",
                 name="homeagent_nav2_skill_executor",
                 output="screen",
-                parameters=[common_params],
+                parameters=[
+                    common_params,
+                    {
+                        "success_position_tolerance_m": ParameterValue(
+                            nav_postcondition_tolerance_m, value_type=float
+                        ),
+                        "require_panda_stow": ParameterValue(
+                            nav_require_panda_stow, value_type=bool
+                        ),
+                        "max_false_success_retries": ParameterValue(
+                            nav_false_success_max_retries, value_type=int
+                        ),
+                        "false_success_retry_delay_sec": ParameterValue(
+                            nav_false_success_retry_delay_sec, value_type=float
+                        ),
+                    },
+                ],
                 condition=IfCondition(use_nav2),
             ),
             Node(
@@ -131,6 +191,14 @@ def generate_launch_description():
                     {"execute_pick": moveit_execute_pick},
                 ],
                 condition=IfCondition(use_moveit),
+            ),
+            Node(
+                package="homeagent_skills",
+                executable="panda_moveit_skill_executor",
+                name="homeagent_panda_moveit_skill_executor",
+                output="screen",
+                parameters=[common_params],
+                condition=IfCondition(use_panda_moveit),
             ),
             Node(
                 package="homeagent_skills",

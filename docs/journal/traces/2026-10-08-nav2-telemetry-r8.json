@@ -1,0 +1,32 @@
+{
+  "sample_count": 112,
+  "start_wall": 1791467002.786814,
+  "end_wall": 1791467058.058305,
+  "overall_odom_displacement_m": 0.67897,
+  "map_to_odom_tf_total": 450,
+  "map_to_odom_tf_age_at_end_wall_sec": 0.07,
+  "nav2_progress_failure_count": 1,
+  "failures": [
+    {
+      "wall_timestamp": 1791467041.6395106,
+      "preceding_15s": {
+        "samples": 30,
+        "wall_duration_sec": 14.52,
+        "sim_duration_sec": 14.5,
+        "odom_displacement_m": 0.03544,
+        "mean_abs_cmd_vel_nav_linear_x": 0.0,
+        "mean_abs_cmd_vel_smoothed_linear_x": null,
+        "mean_abs_cmd_vel_linear_x": 0.0,
+        "mean_abs_measured_odom_linear_x": 0.00375,
+        "latest_odom_xy": [
+          0.6441153776613062,
+          -0.06346207362531255
+        ],
+        "latest_amcl_covariance": [
+          0.00033886047539716246,
+          2.454300043459954e-07
+        ]
+      }
+    }
+  ]
+}

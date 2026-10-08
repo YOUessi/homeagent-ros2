@@ -1,0 +1,10 @@
+{
+  "sample_count": 66,
+  "start_wall": 1791467289.431356,
+  "end_wall": 1791467321.9156756,
+  "overall_odom_displacement_m": 0.71721,
+  "map_to_odom_tf_total": 220,
+  "map_to_odom_tf_age_at_end_wall_sec": 0.02,
+  "nav2_progress_failure_count": 0,
+  "failures": []
+}

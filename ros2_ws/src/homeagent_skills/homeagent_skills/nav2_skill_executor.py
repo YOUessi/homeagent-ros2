@@ -8,11 +8,14 @@ from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.time import Time
+from sensor_msgs.msg import JointState
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from homeagent_interfaces.msg import SafetyDecision, SkillResult
 
 from .navigation_target import trusted_navigation_pose
+from .panda_targets import PANDA_JOINT_NAMES
+from .panda_stow_guard import validate_panda_stow
 
 
 class Nav2SkillExecutor(Node):
@@ -26,6 +29,9 @@ class Nav2SkillExecutor(Node):
         self.declare_parameter("success_position_tolerance_m", 0.30)
         self.declare_parameter("max_false_success_retries", 1)
         self.declare_parameter("false_success_retry_delay_sec", 0.5)
+        self.declare_parameter("require_panda_stow", False)
+        self.declare_parameter("panda_stow_tolerance_rad", 0.07)
+        self.declare_parameter("panda_state_max_age_sec", 2.0)
 
         self._timeout = float(
             self.get_parameter("action_server_timeout_sec").value
@@ -41,6 +47,21 @@ class Nav2SkillExecutor(Node):
         )
         self._retry_delay = float(
             self.get_parameter("false_success_retry_delay_sec").value
+        )
+        self._require_panda_stow = bool(
+            self.get_parameter("require_panda_stow").value
+        )
+        self._panda_tolerance = float(
+            self.get_parameter("panda_stow_tolerance_rad").value
+        )
+        self._panda_state_max_age = float(
+            self.get_parameter("panda_state_max_age_sec").value
+        )
+        self._panda_positions = {}
+        self._panda_last_update = None
+        self._panda_joint_names = set(PANDA_JOINT_NAMES)
+        self.create_subscription(
+            JointState, "/joint_states", self._on_joint_states, 20
         )
 
         self._client = ActionClient(
@@ -65,11 +86,61 @@ class Nav2SkillExecutor(Node):
 
         self._active = {}
         self._retry_timers = {}
+        self._panda_guard_timer = self.create_timer(
+            0.3, self._watch_panda_stow_while_navigating
+        )
 
         self.get_logger().info(
             "HomeAgent Nav2 skill executor ready "
-            f"postcondition_tolerance={self._success_tolerance:.3f}m"
+            f"postcondition_tolerance={self._success_tolerance:.3f}m "
+            f"require_panda_stow={self._require_panda_stow}"
         )
+
+    def _on_joint_states(self, msg: JointState) -> None:
+        saw_panda_joint = False
+        for name, position in zip(msg.name, msg.position):
+            if name in self._panda_joint_names:
+                self._panda_positions[name] = float(position)
+                saw_panda_joint = True
+        if saw_panda_joint:
+            self._panda_last_update = time.monotonic()
+
+    def _panda_stow_preflight(self):
+        if not self._require_panda_stow:
+            return True, "NOT_REQUIRED", {}
+        if self._panda_last_update is None:
+            return False, "PANDA_ARM_STATE_UNAVAILABLE", {
+                "reason": "no Panda joint state received"
+            }
+        age = time.monotonic() - self._panda_last_update
+        if age > self._panda_state_max_age:
+            return False, "PANDA_ARM_STATE_STALE", {
+                "last_state_age_sec": age,
+                "max_age_sec": self._panda_state_max_age,
+            }
+        allowed, code, evidence = validate_panda_stow(
+            self._panda_positions,
+            tolerance_rad=self._panda_tolerance,
+        )
+        return allowed, code, evidence
+
+    def _watch_panda_stow_while_navigating(self) -> None:
+        if not self._require_panda_stow:
+            return
+        for request_id, state in list(self._active.items()):
+            handle = state.get("goal_handle")
+            if handle is None:
+                continue
+            allowed, code, evidence = self._panda_stow_preflight()
+            if allowed:
+                continue
+            self.get_logger().error(
+                f"PANDA_NAV_CANCEL request_id={request_id} reason={code}"
+            )
+            # Send Nav2 cancellation to stop its controller when the arm has
+            # moved out of the stowed envelope during base navigation.
+            handle.cancel_goal_async()
+            self._fail(request_id, code, evidence)
 
     def _on_approved(self, decision: SafetyDecision) -> None:
         if not decision.allowed:
@@ -90,6 +161,20 @@ class Nav2SkillExecutor(Node):
                 success=False,
                 code="INVALID_TRUSTED_NAVIGATION_CONTEXT",
                 result={"error": str(exc)},
+            )
+            return
+
+        stowed, stow_code, stow_evidence = self._panda_stow_preflight()
+        if not stowed:
+            self.get_logger().warning(
+                f"PANDA_NAV_BLOCK request_id={decision.request_id} "
+                f"reason={stow_code}"
+            )
+            self._publish_result(
+                decision,
+                success=False,
+                code=stow_code,
+                result=stow_evidence,
             )
             return
 
@@ -134,6 +219,13 @@ class Nav2SkillExecutor(Node):
     def _try_send(self, request_id: str) -> None:
         state = self._active.get(request_id)
         if state is None:
+            return
+
+        # Bounded retry may occur after the Panda moved; re-check the
+        # physical arm stow posture before every Nav2 goal transmission.
+        stowed, stow_code, stow_evidence = self._panda_stow_preflight()
+        if not stowed:
+            self._fail(request_id, stow_code, stow_evidence)
             return
 
         current = self._map_pose()
@@ -209,6 +301,7 @@ class Nav2SkillExecutor(Node):
             )
             return
 
+        state["goal_handle"] = goal_handle
         result_future = goal_handle.get_result_async()
         result_future.add_done_callback(
             lambda result, rid=request_id:
