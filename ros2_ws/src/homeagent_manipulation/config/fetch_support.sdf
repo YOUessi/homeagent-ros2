@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="fetch_support">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry><box><size>0.16 0.16 0.5801820</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>0.16 0.16 0.5801820</size></box></geometry>
+        <material>
+          <ambient>0.35 0.35 0.35 1</ambient>
+          <diffuse>0.35 0.35 0.35 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

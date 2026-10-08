@@ -125,3 +125,32 @@ def test_pick_with_trusted_arm_target_is_allowed():
     )
     assert decision.allowed
     assert decision.code == "ALLOW"
+
+
+def test_dynamic_pregrasp_inside_forbidden_zone_is_rejected():
+    decision = evaluate_action(
+        {
+            "action": "navigate",
+            "params": {"target": "object_pregrasp:cup"},
+            "context": {
+                "safety_context_trusted": True,
+                "forbidden_zones": ["utility_room"],
+                "target_zone": "utility_room",
+                "resolved_target_pose": [1.2, 1.0, 0.0],
+            },
+        }
+    )
+    assert not decision.allowed
+    assert decision.code == "FORBIDDEN_ZONE"
+
+
+def test_navigation_stow_action_is_whitelisted():
+    decision = evaluate_action(
+        {
+            "action": "stow_arm",
+            "params": {},
+            "context": {},
+        }
+    )
+    assert decision.allowed
+    assert decision.code == "ALLOW"

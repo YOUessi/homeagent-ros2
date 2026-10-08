@@ -9,7 +9,11 @@ def generate_launch_description():
     use_deepseek = LaunchConfiguration("use_deepseek")
     use_nav2 = LaunchConfiguration("use_nav2")
     use_moveit = LaunchConfiguration("use_moveit")
+    moveit_execute_pick = LaunchConfiguration("moveit_execute_pick")
     use_gazebo_contact_pick = LaunchConfiguration("use_gazebo_contact_pick")
+    gazebo_contact_spawn_object = LaunchConfiguration(
+        "gazebo_contact_spawn_object"
+    )
     use_sim_time = LaunchConfiguration("use_sim_time")
     memory_db = LaunchConfiguration("memory_db")
 
@@ -45,9 +49,25 @@ def generate_launch_description():
                 description="Enable the MoveIt2-backed HomeArm skill adapter.",
             ),
             DeclareLaunchArgument(
+                "moveit_execute_pick",
+                default_value="true",
+                description=(
+                    "Let the generic MoveIt adapter own pick. Set false when "
+                    "a specialized physical pick adapter owns that action."
+                ),
+            ),
+            DeclareLaunchArgument(
                 "use_gazebo_contact_pick",
                 default_value="false",
                 description="Enable simulation-only Gazebo contact-gated pick adapter.",
+            ),
+            DeclareLaunchArgument(
+                "gazebo_contact_spawn_object",
+                default_value="true",
+                description=(
+                    "Let the Gazebo contact-pick adapter spawn its demo target. "
+                    "Set false when perception observes a pre-existing object."
+                ),
             ),
             DeclareLaunchArgument(
                 "use_sim_time",
@@ -106,7 +126,10 @@ def generate_launch_description():
                 executable="moveit_skill_executor",
                 name="homeagent_moveit_skill_executor",
                 output="screen",
-                parameters=[common_params],
+                parameters=[
+                    common_params,
+                    {"execute_pick": moveit_execute_pick},
+                ],
                 condition=IfCondition(use_moveit),
             ),
             Node(
@@ -114,7 +137,13 @@ def generate_launch_description():
                 executable="gazebo_contact_pick_executor",
                 name="homeagent_gazebo_contact_pick_executor",
                 output="screen",
-                parameters=[common_params],
+                parameters=[
+                    common_params,
+                    {
+                        "spawn_contact_object":
+                            gazebo_contact_spawn_object,
+                    },
+                ],
                 condition=IfCondition(use_gazebo_contact_pick),
             ),
             Node(

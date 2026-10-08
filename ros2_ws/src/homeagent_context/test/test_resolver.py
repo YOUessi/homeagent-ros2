@@ -121,3 +121,161 @@ def test_pick_known_object_without_approach_is_untrusted():
     )
     assert not context["safety_context_trusted"]
     assert context["context_error"] == "PICK_APPROACH_UNKNOWN"
+
+
+def test_object_pregrasp_uses_fresh_perception_pose():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "object_pregrasp:cup"},
+        object_record={
+            "entity_id": "object-cup",
+            "name": "cup",
+            "payload": {
+                "location": {
+                    "zone": "living_room",
+                    "pose": {
+                        "frame": "map",
+                        "x": 1.4,
+                        "y": 0.7,
+                        "z": 0.448,
+                        "yaw": 0.0,
+                    },
+                    "observed_at": 99.0,
+                },
+                "manipulation": {
+                    "mobile_pregrasp_offset": {
+                        "x": 0.55,
+                        "y": 0.137,
+                        "yaw": 0.0,
+                        "expected_object_z": 0.448,
+                    }
+                },
+            },
+            "confidence": 1.0,
+        },
+        forbidden_zones=["utility_room"],
+        observation_max_age_sec=5.0,
+        now_wall_time=100.0,
+    )
+    assert context["safety_context_trusted"]
+    assert context["navigation_source"] == "object_memory_observation"
+    assert context["target_zone"] == "living_room"
+    x, y, yaw = context["resolved_target_pose"]
+    assert abs(x - 0.85) < 1e-9
+    assert abs(y - 0.563) < 1e-9
+    assert yaw == 0.0
+    assert context["object_observation_age_sec"] == 1.0
+
+
+def test_object_pregrasp_rejects_stale_observation():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "object_pregrasp:cup"},
+        object_record={
+            "entity_id": "object-cup",
+            "name": "cup",
+            "payload": {
+                "location": {
+                    "zone": "living_room",
+                    "pose": {
+                        "frame": "map",
+                        "x": 1.4,
+                        "y": 0.7,
+                        "z": 0.448,
+                        "yaw": 0.0,
+                    },
+                    "observed_at": 90.0,
+                },
+                "manipulation": {
+                    "mobile_pregrasp_offset": {
+                        "x": 0.55,
+                        "y": 0.137,
+                        "yaw": 0.0,
+                    }
+                },
+            },
+            "confidence": 1.0,
+        },
+        observation_max_age_sec=5.0,
+        now_wall_time=100.0,
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "OBJECT_OBSERVATION_STALE"
+
+
+def test_object_pregrasp_requires_observed_pose():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "object_pregrasp:cup"},
+        object_record={
+            "entity_id": "object-cup",
+            "name": "cup",
+            "payload": {
+                "manipulation": {
+                    "mobile_pregrasp_offset": {
+                        "x": 0.55,
+                        "y": 0.137,
+                        "yaw": 0.0,
+                    }
+                }
+            },
+            "confidence": 1.0,
+        },
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "OBJECT_POSE_NOT_OBSERVED"
+
+
+def _fallen_cup_memory_record():
+    return {
+        "entity_id": "object-cup",
+        "name": "cup",
+        "confidence": 1.0,
+        "payload": {
+            "location": {
+                "zone": "living_room",
+                "pose": {
+                    "frame": "map",
+                    "x": 1.0,
+                    "y": -0.1,
+                    "z": 0.04,
+                    "yaw": -3.0,
+                },
+                "observed_at": 100.0,
+            },
+            "manipulation": {
+                "pick_approach_joint_target": [0.2, -0.75, 1.15, -0.35],
+                "mobile_pregrasp_offset": {
+                    "x": 0.54806,
+                    "y": 0.142303,
+                    "yaw": 0.0,
+                    "expected_object_z": 0.620182,
+                },
+            },
+        },
+    }
+
+
+def test_fallen_cup_blocks_recovery_navigation():
+    context = resolve_trusted_context(
+        action="navigate",
+        params={"target": "object_pregrasp:cup"},
+        object_record=_fallen_cup_memory_record(),
+        observation_max_age_sec=5.0,
+        now_wall_time=100.2,
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "OBJECT_HEIGHT_OUT_OF_RANGE"
+    assert context["object_height_error_m"] > 0.5
+    assert "resolved_target_pose" not in context
+
+
+def test_fallen_cup_blocks_fixed_height_pick():
+    context = resolve_trusted_context(
+        action="pick",
+        params={"object": "cup"},
+        object_record=_fallen_cup_memory_record(),
+    )
+    assert not context["safety_context_trusted"]
+    assert context["context_error"] == "OBJECT_HEIGHT_OUT_OF_RANGE"
+    assert "resolved_arm_joint_target" not in context

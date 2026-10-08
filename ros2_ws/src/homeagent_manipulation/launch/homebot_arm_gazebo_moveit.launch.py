@@ -3,13 +3,15 @@ from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def generate_launch_description():
+    gui = LaunchConfiguration("gui")
     manipulation_share = Path(
         get_package_share_directory("homeagent_manipulation")
     )
@@ -57,7 +59,7 @@ def generate_launch_description():
             "world": str(
                 description_share / "worlds" / "home_room.world"
             ),
-            "gui": "false",
+            "gui": gui,
             "verbose": "true",
         }.items(),
     )
@@ -160,6 +162,11 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "gui",
+                default_value="false",
+                description="Launch Gazebo client GUI.",
+            ),
             gazebo,
             robot_state_publisher,
             spawn,

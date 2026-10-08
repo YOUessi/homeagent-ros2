@@ -83,7 +83,16 @@ DEFAULT_ENTITIES = [
             "display_name": "水杯",
             "tags": [],
             "manipulation": {
-                "pick_approach_joint_target": [0.20, -0.75, 1.15, -0.35]
+                "pick_pregrasp_joint_target": [
+                    0.20, -1.0371, 1.4371, -0.35
+                ],
+                "pick_approach_joint_target": [0.20, -0.75, 1.15, -0.35],
+                "mobile_pregrasp_offset": {
+                    "x": 0.5480600,
+                    "y": 0.1423030,
+                    "yaw": 0.0,
+                    "expected_object_z": 0.6201820
+                }
             },
         },
         "confidence": 0.95,

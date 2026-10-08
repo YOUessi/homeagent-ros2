@@ -17,6 +17,8 @@ def _include(package, filename, arguments=None):
 
 
 def generate_launch_description():
+    navigation_share = get_package_share_directory("homeagent_navigation")
+
     physics_robot = _include(
         "homeagent_manipulation",
         "homebot_arm_gazebo_moveit.launch.py",
@@ -25,6 +27,13 @@ def generate_launch_description():
     nav2 = _include(
         "homeagent_navigation",
         "homebot_nav2_runtime.launch.py",
+        {
+            "params_file": os.path.join(
+                navigation_share,
+                "config",
+                "nav2_params.yaml",
+            )
+        },
     )
 
     core = _include(

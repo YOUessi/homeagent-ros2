@@ -38,3 +38,10 @@ def test_pick_rejects_agent_untrusted_joint_target():
                 },
             },
         )
+
+
+def test_navigation_stow_comes_from_trusted_skill_library():
+    name, joints, source = resolve_arm_target("stow_arm", {"context": {}})
+    assert name == "navigation_stow"
+    assert joints == [0.0, -0.60, -1.00, 0.0]
+    assert source == "trusted_skill_library"

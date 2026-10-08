@@ -4,17 +4,19 @@ from homeagent_skills.navigation_target import trusted_navigation_pose
 
 
 def test_trusted_navigation_pose_comes_from_context():
-    target, pose = trusted_navigation_pose(
+    target, pose, source = trusted_navigation_pose(
         {
             "params": {"target": "living_room"},
             "context": {
                 "safety_context_trusted": True,
                 "resolved_target_pose": [0.8, 0.0, 0.0],
+                "navigation_source": "place_memory",
             },
         }
     )
     assert target == "living_room"
     assert pose == (0.8, 0.0, 0.0)
+    assert source == "place_memory"
 
 
 def test_untrusted_navigation_pose_is_rejected():

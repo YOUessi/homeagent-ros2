@@ -57,7 +57,6 @@ class Probe(Node):
             if (
                 self.odom is not None
                 and self.command_pub.get_subscription_count() > 0
-                and self.nav.server_is_ready()
             ):
                 return
         raise RuntimeError("physical mobile stack not ready")
@@ -98,7 +97,10 @@ class Probe(Node):
     def run(self):
         self.wait_ready()
         self.localize()
-        self.spin_for(1.5)
+        self.spin_for(1.0)
+        if not self.nav.wait_for_server(timeout_sec=20.0):
+            raise RuntimeError("NavigateToPose action server unavailable")
+        self.spin_for(0.5)
 
         p0 = self.odom.pose.pose.position
         start = [float(p0.x), float(p0.y)]
@@ -151,7 +153,7 @@ class Probe(Node):
         report["passed"] = (
             bool(nav_result.success)
             and nav_result.code == "NAV2_SUCCEEDED"
-            and nav_payload.get("target_source") == "trusted_memory"
+            and nav_payload.get("target_source") == "place_memory"
             and displacement > 0.5
             and bool(pick_result.success)
             and pick_result.code == "GAZEBO_CONTACT_PICK_SUCCEEDED"

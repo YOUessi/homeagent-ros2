@@ -27,18 +27,20 @@ docker run --rm \
 
     test -s /tmp/homeagent_colcon/install/homeagent_navigation/share/homeagent_navigation/maps/home_room.yaml
 
-    timeout 75 ros2 launch homeagent_navigation homebot_nav2.launch.py \
+    setsid timeout 75 ros2 launch homeagent_navigation homebot_nav2.launch.py \
       >/tmp/homeagent_nav2_stack.log 2>&1 &
     NAV_PID=$!
 
-    timeout 75 ros2 launch homeagent_bringup homeagent_core.launch.py \
+    setsid timeout 75 ros2 launch homeagent_bringup homeagent_core.launch.py \
       use_nav2:=true use_deepseek:=false use_sim_time:=true \
       memory_db:=/tmp/homeagent_nav2_memory.sqlite3 \
       >/tmp/homeagent_core_nav2.log 2>&1 &
     CORE_PID=$!
 
     cleanup() {
-      kill "$NAV_PID" "$CORE_PID" 2>/dev/null || true
+      kill -TERM -- "-$NAV_PID" "-$CORE_PID" 2>/dev/null || true
+      sleep 0.5
+      kill -KILL -- "-$NAV_PID" "-$CORE_PID" 2>/dev/null || true
       wait "$NAV_PID" "$CORE_PID" 2>/dev/null || true
     }
     trap cleanup EXIT INT TERM

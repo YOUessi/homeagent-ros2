@@ -5,12 +5,14 @@ JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
 
 NAMED_ARM_TARGETS = {
     "home": [0.0, 0.0, 0.0, 0.0],
+    "navigation_stow": [0.0, -0.60, -1.00, 0.0],
     "inspect": [0.35, -0.55, 1.05, -0.50],
     "handover": [0.0, -0.30, 0.65, -0.35],
 }
 
 ACTION_TO_ARM_TARGET = {
     "look_at": "inspect",
+    "stow_arm": "navigation_stow",
     "handover": "handover",
 }
 

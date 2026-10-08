@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import math
+import os
 import time
 
 import rclpy
@@ -95,7 +96,12 @@ def main() -> int:
     try:
         node.wait_for_joint_state()
         initial = node.current()
-        target = NAMED_ARM_TARGETS["inspect"]
+        target_name = os.environ.get(
+            "HOMEAGENT_MOVEIT_TARGET", "inspect"
+        )
+        if target_name not in NAMED_ARM_TARGETS:
+            raise RuntimeError(f"unknown named target: {target_name}")
+        target = NAMED_ARM_TARGETS[target_name]
 
         status, result = node.send_joint_goal(target)
         # Give joint-state broadcaster time to publish the settled state.
@@ -112,7 +118,7 @@ def main() -> int:
 
         report = {
             "group": "arm",
-            "target_name": "inspect",
+            "target_name": target_name,
             "joint_names": JOINT_NAMES,
             "initial": initial,
             "target": target,

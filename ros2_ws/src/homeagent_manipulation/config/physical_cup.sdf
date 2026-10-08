@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="physical_cup">
+    <link name="link">
+      <gravity>true</gravity>
+      <self_collide>true</self_collide>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>0.000032</ixx><iyy>0.000032</iyy><izz>0.000011</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry><cylinder><radius>0.021</radius><length>0.08</length></cylinder></geometry>
+        <surface>
+          <friction><ode><mu>40</mu><mu2>40</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry><cylinder><radius>0.021</radius><length>0.08</length></cylinder></geometry>
+        <material>
+          <ambient>0.1 0.45 0.9 1</ambient>
+          <diffuse>0.1 0.45 0.9 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

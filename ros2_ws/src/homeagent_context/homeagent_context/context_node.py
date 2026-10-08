@@ -7,7 +7,11 @@ from rclpy.node import Node
 from homeagent_interfaces.msg import ActionProposal
 from homeagent_interfaces.srv import MemoryQuery
 
-from .resolver import MANIPULATION_ACTIONS, resolve_trusted_context
+from .resolver import (
+    MANIPULATION_ACTIONS,
+    OBJECT_PREGRASP_PREFIX,
+    resolve_trusted_context,
+)
 
 
 class TrustedContextNode(Node):
@@ -16,8 +20,12 @@ class TrustedContextNode(Node):
     def __init__(self) -> None:
         super().__init__("homeagent_context")
         self.declare_parameter("forbidden_zones", ["utility_room"])
+        self.declare_parameter("object_observation_max_age_sec", 5.0)
         self._forbidden_zones = list(
             self.get_parameter("forbidden_zones").value
+        )
+        self._object_observation_max_age = float(
+            self.get_parameter("object_observation_max_age_sec").value
         )
 
         self._memory = self.create_client(
@@ -83,7 +91,7 @@ class TrustedContextNode(Node):
         )
 
     def _resolve_navigation(self, msg: ActionProposal, params: dict) -> None:
-        target = params.get("target", "")
+        target = str(params.get("target", ""))
         if not target:
             self._publish_with_context(
                 msg,
@@ -109,14 +117,67 @@ class TrustedContextNode(Node):
             return
 
         request = MemoryQuery.Request()
-        request.entity_type = "place"
         request.entity_id = ""
-        request.name = str(target)
+
+        if target.startswith(OBJECT_PREGRASP_PREFIX):
+            object_name = target[len(OBJECT_PREGRASP_PREFIX):].strip()
+            if not object_name:
+                self._publish_with_context(
+                    msg,
+                    {
+                        "safety_context_trusted": False,
+                        "context_source": "trusted_world_state",
+                        "context_error": "MISSING_OBJECT_PREGRASP_TARGET",
+                        "forbidden_zones": self._forbidden_zones,
+                    },
+                )
+                return
+
+            request.entity_type = "object"
+            request.name = object_name
+            future = self._memory.call_async(request)
+            future.add_done_callback(
+                lambda done, candidate=msg, parsed=params:
+                self._on_navigation_object(candidate, parsed, done)
+            )
+            return
+
+        request.entity_type = "place"
+        request.name = target
         future = self._memory.call_async(request)
         future.add_done_callback(
             lambda done, candidate=msg, parsed=params:
             self._on_place(candidate, parsed, done)
         )
+
+    def _on_navigation_object(
+        self, msg: ActionProposal, params: dict, future
+    ) -> None:
+        try:
+            response = future.result()
+            object_record = (
+                json.loads(response.record_json) if response.found else None
+            )
+        except Exception as exc:
+            self._publish_with_context(
+                msg,
+                {
+                    "safety_context_trusted": False,
+                    "context_source": "trusted_world_state",
+                    "context_error": f"OBJECT_QUERY_FAILED: {exc}",
+                    "forbidden_zones": self._forbidden_zones,
+                },
+            )
+            return
+
+        context = resolve_trusted_context(
+            action=msg.action,
+            params=params,
+            object_record=object_record,
+            forbidden_zones=self._forbidden_zones,
+            observation_max_age_sec=self._object_observation_max_age,
+        )
+        self._publish_with_context(msg, context)
 
     def _on_place(self, msg: ActionProposal, params: dict, future) -> None:
         try:

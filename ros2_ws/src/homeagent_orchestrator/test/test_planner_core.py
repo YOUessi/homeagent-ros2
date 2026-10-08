@@ -39,3 +39,19 @@ def test_reject_low_level_or_unknown_action():
 def test_reject_missing_required_params():
     with pytest.raises(PlannerOutputError):
         parse_plan_text('{"action":"navigate","params":{}}')
+
+
+def test_parse_fetch_meta_task():
+    plan = parse_plan_text(
+        '{"action":"fetch","params":{"object":"cup"}}'
+    )
+    assert plan["action"] == "fetch"
+    assert plan["params"]["object"] == "cup"
+    assert plan["context"] == {}
+
+
+def test_parse_navigation_stow_action():
+    plan = parse_plan_text('{"action":"stow_arm","params":{}}')
+    assert plan["action"] == "stow_arm"
+    assert plan["params"] == {}
+    assert plan["context"] == {}

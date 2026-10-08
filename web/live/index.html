@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HomeAgent Live Simulation</title>
+<style>
+body{margin:0;background:#0e1116;color:#e8edf4;font:14px system-ui,sans-serif;overflow:hidden}
+header{height:54px;display:flex;align-items:center;gap:16px;padding:0 18px;background:#151a22;border-bottom:1px solid #2a3240}
+h1{font-size:18px;margin:0}.live{color:#73e891;font-weight:700}.live:before{content:"";display:inline-block;width:9px;height:9px;background:#27d65f;border-radius:50%;margin-right:7px;box-shadow:0 0 10px #27d65f}.live.offline{color:#ff8686}.live.offline:before{background:#ff4d4d;box-shadow:0 0 10px #ff4d4d}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;padding:10px;height:calc(100vh - 54px);box-sizing:border-box}
+.card{background:#151a22;border:1px solid #2a3240;border-radius:12px;overflow:hidden}
+.mapwrap{display:flex;align-items:center;justify-content:center;padding:8px;min-height:0}
+.mapstage{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+#map{width:min(94%,calc(100vh - 145px));height:auto;aspect-ratio:1/1;background:#bbb;image-rendering:pixelated;border-radius:10px;box-shadow:0 0 0 1px #344052,0 10px 34px rgba(0,0,0,.25)}
+.armhud{position:absolute;right:18px;bottom:52px;width:320px;padding:10px;background:rgba(10,14,20,.94);border:1px solid #3a4658;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.armhud .hudtitle{font-size:11px;letter-spacing:.08em;color:#9eacbd;margin:0 0 6px}
+#armview{display:block;width:100%;height:auto;background:#0b0f15;border-radius:7px}
+.armmeta{display:flex;justify-content:space-between;margin-top:5px;font:11px ui-monospace,monospace;color:#c2cad5}
+aside{display:flex;flex-direction:column;gap:10px;overflow:auto}.panel{padding:12px}
+.title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#8592a3;margin-bottom:8px}.big{font-size:22px;font-weight:750;margin-bottom:8px}
+.row{display:grid;grid-template-columns:128px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid #212936}.row:last-child{border:0}
+.k{color:#8f9cad}.v,.trace{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}.ok{color:#6fe68e}.bad{color:#ff7d7d}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:10px;color:#aab4c2;font-size:13px}.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+@media(max-width:900px){body{overflow:auto}main{grid-template-columns:1fr;height:auto}.mapwrap{height:70vh}#map{width:min(96%,68vh)}.armhud{position:static;width:min(92%,360px);margin-top:10px}}
+</style>
+</head>
+<body>
+<header><h1>HomeAgent · Gazebo/ROS2 Live</h1><div id="livebadge" class="live">LIVE</div><div id="age">等待状态…</div></header>
+<main>
+<section class="card mapwrap"><div class="mapstage">
+<canvas id="map"></canvas>
+<div class="armhud">
+  <div class="hudtitle">HOMEARM / GRIPPER LIVE</div>
+  <canvas id="armview" width="300" height="190"></canvas>
+  <div class="armmeta"><span id="gripopen">夹爪开口 —</span><span id="armphase">IDLE</span></div>
+</div>
+<div class="legend">
+<span><i class="sw" style="background:#1687ff"></i>HomeBot</span>
+<span><i class="sw" style="background:#ff3939"></i>杯子</span>
+<span><i class="sw" style="background:#25d34f"></i>动态 pregrasp</span>
+<span><i class="sw" style="background:#00c8ff"></i>Nav2 path</span>
+<span><i class="sw" style="background:#ff9d1c"></i>HomeArm</span>
+<span><i class="sw" style="background:#d95cff"></i>夹爪</span>
+</div>
+</div></section>
+<aside>
+<section class="card panel"><div class="title">任务</div><div id="command" class="big">等待命令</div>
+<div class="row"><div class="k">Agent action</div><div id="action" class="v">—</div></div>
+<div class="row"><div class="k">Safety</div><div id="safety" class="v">—</div></div>
+<div class="row"><div class="k">Skill result</div><div id="skill" class="v">—</div></div></section>
+<section class="card panel"><div class="title">实时状态</div>
+<div class="row"><div class="k">Robot pose</div><div id="robot" class="v">—</div></div>
+<div class="row"><div class="k">Cup pose</div><div id="cup" class="v">—</div></div>
+<div class="row"><div class="k">Pregrasp</div><div id="pregrasp" class="v">—</div></div>
+<div class="row"><div class="k">Nav path points</div><div id="pathcount" class="v">0</div></div></section>
+<section class="card panel"><div class="title">HomeArm joints</div><div id="joints" class="trace">—</div></section>
+<section class="card panel"><div class="title">数据来源</div><div class="trace">Gazebo model_states + AMCL + Nav2 plan + joint_states，10Hz 实时刷新。</div></section>
+</aside></main>
+<script>
+var meta=null,mapImg=new Image(),ctx=null,canvas=null,armCanvas=null,armCtx=null;
+function el(id){return document.getElementById(id)}
+function fmtPose(p){return p?("x="+p.x.toFixed(3)+" y="+p.y.toFixed(3)+" yaw="+(p.yaw*180/Math.PI).toFixed(1)+"°"):"—"}
+function worldToPx(x,y){var gx=(x-meta.origin[0])/meta.resolution;var gy=(y-meta.origin[1])/meta.resolution;return[gx,meta.height-1-gy]}
+function circle(x,y,r,c){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=c;ctx.fill()}
+function line(x1,y1,x2,y2,c,w){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=c;ctx.lineWidth=w||2;ctx.stroke()}
+function worldStep(x,y,a,len,lateral){var l=lateral||0;return[x+len*Math.cos(a)-l*Math.sin(a),y+len*Math.sin(a)+l*Math.cos(a)]}
+function drawArmOnMap(s){
+ if(!s.robot)return;
+ var js=s.joints||{},q1=js.joint1||0,q2=js.joint2||0,q3=js.joint3||0,grip=js.gripper_joint||0;
+ var a=s.robot.yaw+q1,m=worldStep(s.robot.x,s.robot.y,s.robot.yaw,-0.12,0);
+ var p1=worldStep(m[0],m[1],a,0.28*Math.cos(q2),0);
+ var p2=worldStep(p1[0],p1[1],a,0.24*Math.cos(q2+q3),0);
+ var tool=worldStep(p2[0],p2[1],a,0.16*Math.cos(q2+q3),0);
+ var pts=[m,p1,p2,tool].map(function(p){return worldToPx(p[0],p[1])});
+ line(pts[0][0],pts[0][1],pts[1][0],pts[1][1],"#ff9d1c",3);
+ line(pts[1][0],pts[1][1],pts[2][0],pts[2][1],"#ffc04a",3);
+ line(pts[2][0],pts[2][1],pts[3][0],pts[3][1],"#ff9d1c",3);
+ for(var i=0;i<pts.length;i++)circle(pts[i][0],pts[i][1],2.1,"#ffe2a8");
+ var fs=worldStep(tool[0],tool[1],a,0.07,-0.025),fe=worldStep(fs[0],fs[1],a,0.10,0);
+ var ms=worldStep(tool[0],tool[1],a,0.07,0.025+grip),me=worldStep(ms[0],ms[1],a,0.10,0);
+ var a1=worldToPx(fs[0],fs[1]),a2=worldToPx(fe[0],fe[1]),b1=worldToPx(ms[0],ms[1]),b2=worldToPx(me[0],me[1]);
+ line(a1[0],a1[1],a2[0],a2[1],"#d95cff",2.7);line(b1[0],b1[1],b2[0],b2[1],"#d95cff",2.7);
+}
+function drawArmHud(s){
+ if(!armCtx)return;
+ var c=armCtx,w=armCanvas.width,h=armCanvas.height,js=s.joints||{};
+ var q1=js.joint1||0,q2=js.joint2||0,q3=js.joint3||0,q4=js.joint4||0,grip=js.gripper_joint;
+ c.clearRect(0,0,w,h);c.fillStyle="#0b0f15";c.fillRect(0,0,w,h);
+ c.strokeStyle="#202938";c.lineWidth=1;for(var gx=0;gx<w;gx+=30){c.beginPath();c.moveTo(gx,0);c.lineTo(gx,h);c.stroke()}for(var gy=0;gy<h;gy+=30){c.beginPath();c.moveTo(0,gy);c.lineTo(w,gy);c.stroke()}
+ function seg(a,b,color,width){c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.strokeStyle=color;c.lineWidth=width;c.lineCap="round";c.stroke()}
+ function jnt(p){c.beginPath();c.arc(p[0],p[1],4,0,Math.PI*2);c.fillStyle="#ffe2a8";c.fill()}
+ var sc=180,base=[24,166],shoulder=[24,101];
+ var p2=[shoulder[0]+0.28*sc*Math.cos(q2),shoulder[1]+0.28*sc*Math.sin(q2)];
+ var a23=q2+q3,p3=[p2[0]+0.24*sc*Math.cos(a23),p2[1]+0.24*sc*Math.sin(a23)];
+ var tool=[p3[0]+0.23*sc*Math.cos(a23),p3[1]+0.23*sc*Math.sin(a23)];
+ seg(base,shoulder,"#748094",7);seg(shoulder,p2,"#ff9d1c",7);seg(p2,p3,"#ffc04a",7);seg(p3,tool,"#ff9d1c",7);
+ jnt(shoulder);jnt(p2);jnt(p3);jnt(tool);
+ c.fillStyle="#8d9aac";c.font="10px ui-monospace,monospace";c.fillText("SIDE VIEW",9,14);c.fillText("q1 "+q1.toFixed(2)+"  q4 "+q4.toFixed(2),9,27);
+ var opening=grip==null?null:(38+grip*1000),cx=246,cy=105;
+ c.fillStyle="#8d9aac";c.fillText("GRIPPER FRONT",205,14);
+ c.beginPath();c.arc(cx,cy,18,0,Math.PI*2);c.fillStyle="rgba(255,57,57,.35)";c.fill();
+ var gap=opening==null?58:Math.max(38,Math.min(82,opening)),half=gap*1.05/2;
+ c.fillStyle="#d95cff";c.fillRect(cx-half-10,cy-45,10,90);c.fillRect(cx+half,cy-45,10,90);
+ c.strokeStyle="#f1c4ff";c.setLineDash([3,3]);c.beginPath();c.moveTo(cx-half,cy+53);c.lineTo(cx+half,cy+53);c.stroke();c.setLineDash([]);
+ c.fillStyle="#d8dee8";c.font="11px ui-monospace,monospace";c.textAlign="center";c.fillText(opening==null?"—":opening.toFixed(1)+" mm",cx,cy+70);c.textAlign="left";
+ el("gripopen").textContent=opening==null?"夹爪开口 —":"夹爪开口 "+opening.toFixed(1)+" mm";
+ el("armphase").textContent=(s.candidate&&s.candidate.action)?s.candidate.action.toUpperCase():"IDLE";
+}
+function draw(s){
+ if(!meta||!mapImg.complete)return;
+ ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(mapImg,0,0);
+ if(s.path&&s.path.length>1){ctx.beginPath();for(var i=0;i<s.path.length;i++){var p=worldToPx(s.path[i][0],s.path[i][1]);if(i)ctx.lineTo(p[0],p[1]);else ctx.moveTo(p[0],p[1])}ctx.strokeStyle="#00c8ff";ctx.lineWidth=1.7;ctx.stroke()}
+ if(s.pregrasp){var pg=worldToPx(s.pregrasp.x,s.pregrasp.y);line(pg[0]-6,pg[1],pg[0]+6,pg[1],"#25d34f",2);line(pg[0],pg[1]-6,pg[0],pg[1]+6,"#25d34f",2)}
+ if(s.cup){var cp=worldToPx(s.cup.x,s.cup.y);circle(cp[0],cp[1],5,"#ff3939");circle(cp[0],cp[1],2,"#fff")}
+ if(s.support){var sp=worldToPx(s.support.x,s.support.y);ctx.strokeStyle="#a66b2d";ctx.lineWidth=2;ctx.strokeRect(sp[0]-5,sp[1]-5,10,10)}
+ if(s.robot){var rp=worldToPx(s.robot.x,s.robot.y);circle(rp[0],rp[1],6,"#1687ff");line(rp[0],rp[1],rp[0]+13*Math.cos(s.robot.yaw),rp[1]-13*Math.sin(s.robot.yaw),"#10151c",2.5)}
+ drawArmOnMap(s);drawArmHud(s);
+}
+async function tick(){
+ try{
+  var s=await fetch("/artifacts/live_web/state.json?t="+Date.now()).then(function(r){return r.json()});
+  draw(s);var age=Math.max(0,Date.now()/1000-s.timestamp);el("age").textContent=age.toFixed(1)+" s ago";
+  var badge=el("livebadge");if(age>2.0){badge.textContent="OFFLINE";badge.className="live offline"}else{badge.textContent="LIVE";badge.className="live"}
+  el("command").textContent=s.command||"等待命令";
+  el("action").textContent=s.candidate?(s.candidate.action+" · "+s.candidate.params_json):"—";
+  if(s.decision){el("safety").textContent=(s.decision.allowed?"ALLOW":"REJECT")+" · "+s.decision.code;el("safety").className="v "+(s.decision.allowed?"ok":"bad")}else el("safety").textContent="—";
+  if(s.skill){el("skill").textContent=(s.skill.success?"SUCCESS":"FAIL")+" · "+s.skill.code;el("skill").className="v "+(s.skill.success?"ok":"bad")}else el("skill").textContent="—";
+  el("robot").textContent=fmtPose(s.robot);el("cup").textContent=fmtPose(s.cup);el("pregrasp").textContent=fmtPose(s.pregrasp);el("pathcount").textContent=s.path?s.path.length:0;
+  var arr=[],js=s.joints||{};["joint1","joint2","joint3","joint4","gripper_joint"].forEach(function(k){arr.push(k.padEnd(14)+" "+(js[k]==null?"—":js[k].toFixed(4)))});el("joints").textContent=arr.join("\n");
+ }catch(e){el("age").textContent="等待仿真数据…"}
+ setTimeout(tick,100);
+}
+(async function(){
+ meta=await fetch("/artifacts/live_web/map_meta.json").then(function(r){return r.json()});
+ canvas=el("map");canvas.width=meta.width;canvas.height=meta.height;ctx=canvas.getContext("2d");
+ armCanvas=el("armview");armCtx=armCanvas.getContext("2d");
+ mapImg.src="/artifacts/live_web/map.png";mapImg.onload=tick;
+})();
+</script>
+</body></html>

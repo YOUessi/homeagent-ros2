@@ -16,6 +16,7 @@
   <exec_depend>homeagent_orchestrator</exec_depend>
   <exec_depend>homeagent_navigation</exec_depend>
   <exec_depend>homeagent_manipulation</exec_depend>
+  <exec_depend>homeagent_perception</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

@@ -110,15 +110,17 @@ def main() -> int:
     rclpy.init()
     node = Nav2E2EProbe()
     try:
-        node.wait_for_odom(timeout=10.0)
-        node.wait_for_nav2(timeout=15.0)
+        node.wait_for_odom(timeout=15.0)
 
         start = node.odom.pose.pose.position
         x0, y0 = float(start.x), float(start.y)
 
+        # Establish map->odom first. Waiting for NavigateToPose before
+        # publishing /initialpose creates a lifecycle/TF startup race.
         node.set_initial_pose()
-        node.wait_for_amcl(timeout=10.0)
-        node.spin_for(2.0)
+        node.wait_for_amcl(timeout=12.0)
+        node.spin_for(1.0)
+        node.wait_for_nav2(timeout=20.0)
 
         node.send_user_command("去客厅")
         result = node.wait_for_skill_result(timeout=45.0)

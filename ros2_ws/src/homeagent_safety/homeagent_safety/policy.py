@@ -11,6 +11,7 @@ ALLOWED_ACTIONS = {
     "place",
     "handover",
     "look_at",
+    "stow_arm",
     "stop",
 }
 
@@ -52,8 +53,14 @@ def evaluate_action(proposal: Dict[str, Any]) -> Decision:
         if not isinstance(target, str) or not target:
             return _reject("MISSING_TARGET", "navigate requires params.target")
         forbidden = context.get("forbidden_zones") or []
+        target_zone = context.get("target_zone")
         if target in forbidden:
             return _reject("FORBIDDEN_ZONE", f"target zone '{target}' is forbidden")
+        if isinstance(target_zone, str) and target_zone in forbidden:
+            return _reject(
+                "FORBIDDEN_ZONE",
+                f"resolved target is inside forbidden zone '{target_zone}'",
+            )
         if context.get("safety_context_trusted") is not True:
             return _reject(
                 "UNTRUSTED_NAVIGATION_CONTEXT",

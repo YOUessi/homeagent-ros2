@@ -4,7 +4,7 @@ from typing import Tuple
 
 def trusted_navigation_pose(
     proposal: dict,
-) -> Tuple[str, Tuple[float, float, float]]:
+) -> Tuple[str, Tuple[float, float, float], str]:
     """Extract a Safety-approved navigation target from trusted context."""
     params = proposal.get("params") or {}
     context = proposal.get("context") or {}
@@ -28,4 +28,5 @@ def trusted_navigation_pose(
     if not all(math.isfinite(value) for value in pose):
         raise ValueError("resolved_target_pose contains non-finite values")
 
-    return target, pose
+    source = str(context.get("navigation_source") or "trusted_memory")
+    return target, pose, source

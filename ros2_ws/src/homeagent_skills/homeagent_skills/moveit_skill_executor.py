@@ -35,11 +35,15 @@ class MoveItSkillExecutor(Node):
         super().__init__("homeagent_moveit_skill_executor")
         self.declare_parameter("action_server_timeout_sec", 3.0)
         self.declare_parameter("allowed_planning_time_sec", 5.0)
+        self.declare_parameter("execute_pick", True)
         self._server_timeout = float(
             self.get_parameter("action_server_timeout_sec").value
         )
         self._planning_time = float(
             self.get_parameter("allowed_planning_time_sec").value
+        )
+        self._execute_pick = bool(
+            self.get_parameter("execute_pick").value
         )
 
         self._client = ActionClient(self, MoveGroup, "/move_action")
@@ -65,6 +69,9 @@ class MoveItSkillExecutor(Node):
 
     def _on_approved(self, decision: SafetyDecision) -> None:
         if not decision.allowed:
+            return
+        if decision.action == "pick" and not self._execute_pick:
+            # A specialized physical pick adapter owns pick in this runtime.
             return
 
         try:

@@ -39,7 +39,30 @@ docker run --rm \
     }
     trap cleanup EXIT INT TERM
 
-    sleep 16
+    echo "=== Waiting for integrated runtime ==="
+    READY=0
+    for _ in $(seq 1 80); do
+      SERVICES="$(ros2 service list 2>/dev/null || true)"
+      TOPICS="$(ros2 topic list 2>/dev/null || true)"
+      ACTIONS="$(ros2 action list 2>/dev/null || true)"
+      if echo "$SERVICES" | grep -qx "/homeagent/memory/upsert" \
+        && echo "$SERVICES" | grep -qx "/controller_manager/list_controllers" \
+        && echo "$SERVICES" | grep -qx "/spawn_entity" \
+        && echo "$TOPICS" | grep -qx "/odom" \
+        && echo "$ACTIONS" | grep -qx "/navigate_to_pose" \
+        && echo "$ACTIONS" | grep -qx "/move_action"; then
+        READY=1
+        break
+      fi
+      sleep 0.5
+    done
+
+    if [ "$READY" -ne 1 ]; then
+      echo "ERROR: integrated runtime did not become ready"
+      tail -220 /tmp/homeagent_physical_mobile.log
+      exit 3
+    fi
+
     python3 /workspace/scripts/seed_home_memory.py >/tmp/homeagent_physical_mobile_seed.log
 
     set +e
