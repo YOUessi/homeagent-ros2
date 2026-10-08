@@ -5,7 +5,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 TS_IP="$(tailscale ip -4 | head -1)"
 test -n "$TS_IP"
-test -f artifacts/panda_mobile/homebot_panda.urdf
 mkdir -p artifacts/panda_live
 docker image inspect homeagent-ros2:panda-visual >/dev/null
 docker rm -f homeagent-panda-live homeagent-panda-3d >/dev/null 2>&1 || true
@@ -17,8 +16,10 @@ docker run -d --name homeagent-panda-live --network host --ipc host \
   set -e
   source /opt/ros/humble/setup.bash
   cd /workspace/ros2_ws
-  colcon --log-base /tmp/panda_live_colcon/log build --packages-select homeagent_manipulation homeagent_description --build-base /tmp/panda_live_colcon/build --install-base /tmp/panda_live_colcon/install --symlink-install > /workspace/artifacts/panda_live/build.log 2>&1
+  colcon --log-base /tmp/panda_live_colcon/log build --packages-select homeagent_manipulation homeagent_description homeagent_gazebo_plugins --build-base /tmp/panda_live_colcon/build --install-base /tmp/panda_live_colcon/install --symlink-install > /workspace/artifacts/panda_live/build.log 2>&1
   source /tmp/panda_live_colcon/install/setup.bash
+  export GAZEBO_PLUGIN_PATH="/tmp/panda_live_colcon/install/homeagent_gazebo_plugins/lib:${GAZEBO_PLUGIN_PATH:-}"
+  python3 /workspace/scripts/generate_panda_physics_urdf.py --output /workspace/artifacts/panda_mobile/homebot_panda.urdf --controllers /workspace/ros2_ws/src/homeagent_manipulation/config/panda_ros2_controllers.yaml --mount homebot
   exec ros2 launch homeagent_manipulation panda_gazebo_physics.launch.py \
     > /workspace/artifacts/panda_live/launch.log 2>&1
 '
