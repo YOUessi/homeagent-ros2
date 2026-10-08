@@ -55,9 +55,9 @@ def main():
             observed_links.update(dict(zip(msg.name,msg.pose)))
         link_sub=node.create_subscription(LinkStates,"/gazebo/link_states",links_cb,10)
         deadline=time.monotonic()+8
-        while "homebot_panda::panda_hand" not in observed_links and time.monotonic()<deadline:
+        while "homebot_panda::panda_leftfinger" not in observed_links and time.monotonic()<deadline:
             rclpy.spin_once(node,timeout_sec=0.1)
-        if "homebot_panda::panda_hand" not in observed_links:
+        if "homebot_panda::panda_leftfinger" not in observed_links:
             raise RuntimeError("Gazebo link_states missing Panda hand")
         node.wait_ready()
         report["ready_code"]=node.initialize_ready()
@@ -65,12 +65,17 @@ def main():
         request=SpawnEntity.Request()
         request.name="panda_grasp_cup";request.xml=CUP
         request.reference_frame="world"
-        hand_pose=observed_links["homebot_panda::panda_hand"]
+        hand_pose=observed_links["homebot_panda::panda_leftfinger"]
         q=hand_pose.orientation
         # Rotate local [0,0,0.088] into world using unit quaternion.
-        rotated=[2*(q.x*q.z+q.w*q.y)*0.088,
-                 2*(q.y*q.z-q.w*q.x)*0.088,
-                 (1-2*(q.x*q.x+q.y*q.y))*0.088]
+        # At 35mm finger opening the object lies between both jaws:
+        # left finger local y offset -0.035m, local z +0.030m.
+        vx,vy,vz=0.0,-0.035,0.030
+        rotated=[
+          (1-2*(q.y*q.y+q.z*q.z))*vx+2*(q.x*q.y-q.w*q.z)*vy+2*(q.x*q.z+q.w*q.y)*vz,
+          2*(q.x*q.y+q.w*q.z)*vx+(1-2*(q.x*q.x+q.z*q.z))*vy+2*(q.y*q.z-q.w*q.x)*vz,
+          2*(q.x*q.z-q.w*q.y)*vx+2*(q.y*q.z+q.w*q.x)*vy+(1-2*(q.x*q.x+q.y*q.y))*vz
+        ]
         request.initial_pose.position.x=hand_pose.position.x+rotated[0]
         request.initial_pose.position.y=hand_pose.position.y+rotated[1]
         request.initial_pose.position.z=hand_pose.position.z+rotated[2]
@@ -80,7 +85,7 @@ def main():
         report["close"]=node.set_gripper(0.005)
         time.sleep(0.5)
         def pose(ref):
-            if ref=="homebot_panda::panda_hand":
+            if ref=="homebot_panda::panda_leftfinger":
                 rclpy.spin_once(node,timeout_sec=0.15)
                 return xyz(observed_links[ref])
             req=GetEntityState.Request()
@@ -89,7 +94,7 @@ def main():
             if not result.success: raise RuntimeError("cup pose failed: "+ref)
             return xyz(result.state.pose)
         before_world=pose("panda_grasp_cup")
-        before_hand=pose("homebot_panda::panda_hand")
+        before_hand=pose("homebot_panda::panda_leftfinger")
         before_rel=[a-b for a,b in zip(before_world,before_hand)]
         report["before_world"]=before_world
         report["before_relative"]=before_rel
@@ -104,7 +109,7 @@ def main():
         report["lift"]=node.move_to(INSPECT,"panda_cup_lift")
         time.sleep(0.6)
         after_world=pose("panda_grasp_cup")
-        after_hand=pose("homebot_panda::panda_hand")
+        after_hand=pose("homebot_panda::panda_leftfinger")
         after_rel=[a-b for a,b in zip(after_world,after_hand)]
         report["world_displacement_m"]=distance(before_world,after_world)
         report["tool_relative_drift_m"]=distance(before_rel,after_rel)
