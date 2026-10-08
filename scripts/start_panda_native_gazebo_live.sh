@@ -29,6 +29,8 @@ docker run -d --name homeagent-panda-3d --network host --ipc host \
   set -e
   export DISPLAY=:97 GAZEBO_MASTER_URI=http://127.0.0.1:11380
   export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
+  export GAZEBO_MODEL_PATH="/opt/ros/humble/share:${GAZEBO_MODEL_PATH:-}"
+  export GAZEBO_RESOURCE_PATH="/opt/ros/humble/share:${GAZEBO_RESOURCE_PATH:-}"
   export XDG_RUNTIME_DIR=/tmp/runtime-panda
   mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
   Xvfb :97 -screen 0 1920x1080x24 +extension GLX +render -noreset > /workspace/artifacts/panda_live/xvfb.log 2>&1 &
