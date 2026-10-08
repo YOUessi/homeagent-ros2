@@ -54,21 +54,33 @@ def main():
         report["open"]=node.set_gripper(0.035)
         request=SpawnEntity.Request()
         request.name="panda_grasp_cup";request.xml=CUP
-        request.reference_frame="homebot_panda::panda_hand"
-        request.initial_pose.position.z=0.088
-        request.initial_pose.orientation.w=1.0
+        request.reference_frame="world"
+        hand_req=GetEntityState.Request()
+        hand_req.name="homebot_panda::panda_hand"
+        hand_req.reference_frame="world"
+        hand_pose=call(node,get,hand_req).state.pose
+        q=hand_pose.orientation
+        # Rotate local [0,0,0.088] into world using unit quaternion.
+        rotated=[2*(q.x*q.z+q.w*q.y)*0.088,
+                 2*(q.y*q.z-q.w*q.x)*0.088,
+                 (1-2*(q.x*q.x+q.y*q.y))*0.088]
+        request.initial_pose.position.x=hand_pose.position.x+rotated[0]
+        request.initial_pose.position.y=hand_pose.position.y+rotated[1]
+        request.initial_pose.position.z=hand_pose.position.z+rotated[2]
+        request.initial_pose.orientation=q
         spawned=call(node,spawn,request)
         if not spawned.success: raise RuntimeError("spawn rejected: "+spawned.status_message)
         report["close"]=node.set_gripper(0.005)
         time.sleep(0.5)
         def pose(ref):
             req=GetEntityState.Request()
-            req.name="panda_grasp_cup";req.reference_frame=ref
+            req.name=ref;req.reference_frame="world"
             result=call(node,get,req)
             if not result.success: raise RuntimeError("cup pose failed: "+ref)
             return xyz(result.state.pose)
-        before_world=pose("world")
-        before_rel=pose("homebot_panda::panda_hand")
+        before_world=pose("panda_grasp_cup")
+        before_hand=pose("homebot_panda::panda_hand")
+        before_rel=[a-b for a,b in zip(before_world,before_hand)]
         report["before_world"]=before_world
         report["before_relative"]=before_rel
         # Enable gravity for the subsequent physical lift test.
@@ -81,8 +93,9 @@ def main():
         report["gravity_enabled_for_lift"]=True
         report["lift"]=node.move_to(INSPECT,"panda_cup_lift")
         time.sleep(0.6)
-        after_world=pose("world")
-        after_rel=pose("homebot_panda::panda_hand")
+        after_world=pose("panda_grasp_cup")
+        after_hand=pose("homebot_panda::panda_hand")
+        after_rel=[a-b for a,b in zip(after_world,after_hand)]
         report["world_displacement_m"]=distance(before_world,after_world)
         report["tool_relative_drift_m"]=distance(before_rel,after_rel)
         report["after_world"]=after_world
@@ -91,7 +104,7 @@ def main():
         # Release must be tested even if lift fails.
         report["release"]=node.set_gripper(0.035)
         time.sleep(0.4)
-        report["after_release_world"]=pose("world")
+        report["after_release_world"]=pose("panda_grasp_cup")
     except Exception as exc:
         report["error"]=str(exc)
     finally:
