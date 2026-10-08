@@ -194,7 +194,7 @@ def main():
         uri = mesh.attrib.get("filename", "")
         prefix = "package://moveit_resources_panda_description/"
         if uri.startswith(prefix):
-            mesh.set("filename", "file:///opt/ros/humble/share/moveit_resources_panda_description/" + uri[len(prefix):])
+            mesh.set("filename", "/opt/ros/humble/share/moveit_resources_panda_description/" + uri[len(prefix):])
 
     for index in range(8):
         link = root.find(f"./link[@name='panda_link{index}']")
