@@ -5,7 +5,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 TS_IP="$(tailscale ip -4 | head -1)"
 test -n "$TS_IP"
-mkdir -p artifacts/panda_live
+mkdir -p artifacts/panda_live artifacts/gazebo_models/panda_visual/meshes
+cat > artifacts/gazebo_models/panda_visual/model.config <<'XML'
+<?xml version="1.0"?><model><name>panda_visual</name><version>1.0</version><sdf version="1.6">model.sdf</sdf><description>Panda visual mesh resources</description></model>
+XML
+printf '<sdf version="1.6"><model name="panda_visual"><static>true</static><link name="link"/></model></sdf>\n' > artifacts/gazebo_models/panda_visual/model.sdf
+ln -sfn /opt/ros/humble/share/moveit_resources_panda_description/meshes/visual artifacts/gazebo_models/panda_visual/meshes/visual
 docker image inspect homeagent-ros2:panda-visual >/dev/null
 docker rm -f homeagent-panda-live homeagent-panda-3d >/dev/null 2>&1 || true
 docker run -d --name homeagent-panda-live --network host --ipc host \
@@ -14,6 +19,7 @@ docker run -d --name homeagent-panda-live --network host --ipc host \
   -e HOMEAGENT_PANDA_GAZEBO_URDF=/workspace/artifacts/panda_mobile/homebot_panda.urdf \
   -v "$ROOT:/workspace" --entrypoint bash homeagent-ros2:panda-visual -lc '
   set -e
+  export GAZEBO_MODEL_PATH=/workspace/artifacts/gazebo_models
   source /opt/ros/humble/setup.bash
   cd /workspace/ros2_ws
   colcon --log-base /tmp/panda_live_colcon/log build --packages-select homeagent_manipulation homeagent_description homeagent_gazebo_plugins --build-base /tmp/panda_live_colcon/build --install-base /tmp/panda_live_colcon/install --symlink-install > /workspace/artifacts/panda_live/build.log 2>&1
@@ -29,7 +35,7 @@ docker run -d --name homeagent-panda-3d --network host --ipc host \
   set -e
   export DISPLAY=:96 GAZEBO_MASTER_URI=http://127.0.0.1:11380
   export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
-  export GAZEBO_MODEL_PATH=/root/.gazebo/models
+  export GAZEBO_MODEL_PATH=/workspace/artifacts/gazebo_models:/root/.gazebo/models
   export GAZEBO_RESOURCE_PATH=/usr/share/gazebo-11
   export XDG_RUNTIME_DIR=/tmp/runtime-panda
   mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
