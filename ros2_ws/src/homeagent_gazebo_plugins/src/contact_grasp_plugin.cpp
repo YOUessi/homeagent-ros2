@@ -32,7 +32,8 @@ public:
     this->open_threshold_ = GetDouble(sdf, "open_threshold", 0.020);
     this->contact_window_sec_ = GetDouble(sdf, "contact_window_sec", 0.20);
     this->enable_gravity_on_attach_ =
-      GetString(sdf, "enable_gravity_on_attach", "false") == "true";
+      sdf->HasElement("enable_gravity_on_attach") &&
+      sdf->Get<bool>("enable_gravity_on_attach");
 
     auto * contact_manager = this->world_->Physics()->GetContactManager();
     if (contact_manager)
@@ -43,7 +44,8 @@ public:
 
     gzmsg << "[HomeAgentContactGrasp] ready model=" << this->model_->GetName()
           << " target=" << this->target_model_name_
-          << " attach_link=" << this->attach_link_name_ << "\n";
+          << " attach_link=" << this->attach_link_name_
+          << " gravity_on_attach=" << this->enable_gravity_on_attach_ << "\n";
   }
 
 private:
