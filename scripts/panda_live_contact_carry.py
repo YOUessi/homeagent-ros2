@@ -8,7 +8,8 @@ No autonomous visual localization and no friction-only claim.
 """
 import json, math, os, time
 import rclpy
-from gazebo_msgs.srv import SpawnEntity, GetEntityState, GetLinkState, SetLinkProperties
+from gazebo_msgs.srv import SpawnEntity, GetEntityState, SetLinkProperties
+from gazebo_msgs.msg import LinkStates
 from panda_gazebo_physics_e2e import PhysicalPandaProbe
 from panda_moveit_joint_demo import READY, INSPECT
 
@@ -49,19 +50,22 @@ def main():
         spawn=node.create_client(SpawnEntity,"/spawn_entity")
         get=node.create_client(GetEntityState,"/gazebo/get_entity_state")
         props=node.create_client(SetLinkProperties,"/gazebo/set_link_properties")
-        link_get=node.create_client(GetLinkState,"/gazebo/get_link_state")
+        observed_links={}
+        def links_cb(msg):
+            observed_links.update(dict(zip(msg.name,msg.pose)))
+        link_sub=node.create_subscription(LinkStates,"/gazebo/link_states",links_cb,10)
+        deadline=time.monotonic()+8
+        while "homebot_panda::panda_hand" not in observed_links and time.monotonic()<deadline:
+            rclpy.spin_once(node,timeout_sec=0.1)
+        if "homebot_panda::panda_hand" not in observed_links:
+            raise RuntimeError("Gazebo link_states missing Panda hand")
         node.wait_ready()
         report["ready_code"]=node.initialize_ready()
         report["open"]=node.set_gripper(0.035)
         request=SpawnEntity.Request()
         request.name="panda_grasp_cup";request.xml=CUP
         request.reference_frame="world"
-        hand_req=GetLinkState.Request()
-        hand_req.link_name="homebot_panda::panda_hand"
-        hand_req.reference_frame="world"
-        hand_response=call(node,link_get,hand_req)
-        if not hand_response.success: raise RuntimeError("hand link unavailable")
-        hand_pose=hand_response.link_state.pose
+        hand_pose=observed_links["homebot_panda::panda_hand"]
         q=hand_pose.orientation
         # Rotate local [0,0,0.088] into world using unit quaternion.
         rotated=[2*(q.x*q.z+q.w*q.y)*0.088,
@@ -77,11 +81,8 @@ def main():
         time.sleep(0.5)
         def pose(ref):
             if ref=="homebot_panda::panda_hand":
-                req=GetLinkState.Request()
-                req.link_name=ref;req.reference_frame="world"
-                result=call(node,link_get,req)
-                if not result.success: raise RuntimeError("hand link pose failed")
-                return xyz(result.link_state.pose)
+                rclpy.spin_once(node,timeout_sec=0.15)
+                return xyz(observed_links[ref])
             req=GetEntityState.Request()
             req.name=ref;req.reference_frame="world"
             result=call(node,get,req)
