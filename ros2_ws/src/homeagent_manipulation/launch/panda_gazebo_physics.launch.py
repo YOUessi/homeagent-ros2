@@ -26,6 +26,8 @@ def generate_launch_description():
     if not robot_file.exists():
         raise RuntimeError(f"Missing generated Panda physics URDF: {robot_file}")
     robot_description = robot_file.read_text(encoding="utf-8")
+    is_mobile = os.environ.get("HOMEAGENT_PANDA_MOUNT") == "homebot"
+    gazebo_entity = "homebot_panda" if is_mobile else "panda_physics"
 
     moveit_config = (
         MoveItConfigsBuilder("moveit_resources_panda")
@@ -70,8 +72,9 @@ def generate_launch_description():
                 executable="spawn_entity.py",
                 output="screen",
                 arguments=[
-                    "-entity", "panda_physics",
+                    "-entity", gazebo_entity,
                     "-topic", "robot_description",
+                    "-z", "0.12" if is_mobile else "0.0",
                 ],
             ),
         ],

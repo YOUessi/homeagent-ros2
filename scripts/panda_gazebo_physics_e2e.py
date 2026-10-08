@@ -37,7 +37,8 @@ class PhysicalPandaProbe(PandaProbe):
         points = []
         for name in ("panda_leftfinger", "panda_rightfinger"):
             request = GetEntityState.Request()
-            request.name = f"panda_physics::{name}"
+            entity = os.environ.get("PANDA_GAZEBO_ENTITY", "panda_physics")
+            request.name = f"{entity}::{name}"
             request.reference_frame = "world"
             future = self.entity_state.call_async(request)
             rclpy.spin_until_future_complete(self, future, timeout_sec=4.0)

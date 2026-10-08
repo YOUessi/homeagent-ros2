@@ -8,6 +8,7 @@ proxies are explicitly simulation approximations, NOT measured collision CAD.
 Generated URDF is an artifact; this generator is the versioned source.
 """
 import argparse
+import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -114,6 +115,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True)
     parser.add_argument("--controllers", required=True)
+    parser.add_argument(
+        "--mount", choices=["fixed_base", "homebot"], default="fixed_base",
+        help="fixed Panda base, or dynamically attach it to HomeBot chassis",
+    )
+    parser.add_argument(
+        "--homebot-xacro",
+        default="/workspace/ros2_ws/src/homeagent_description/urdf/homebot.urdf.xacro",
+    )
     args = parser.parse_args()
 
     inertials = yaml.safe_load(INERTIALS.read_text())
@@ -158,14 +167,46 @@ def main():
                 finger=name in FINGERS,
             )
 
-    # Standalone fixed-base physics baseline, NOT yet mounted on HomeBot.
-    sub(root, "link", name="world")
-    anchor = sub(root, "joint", name="panda_world_fixed", type="fixed")
-    sub(anchor, "parent", link="world")
-    sub(anchor, "child", link="panda_link0")
-    sub(anchor, "origin", xyz="0 0 0.45", rpy="0 0 0")
+    if args.mount == "fixed_base":
+        sub(root, "link", name="world")
+        anchor = sub(root, "joint", name="panda_world_fixed", type="fixed")
+        sub(anchor, "parent", link="world")
+        sub(anchor, "child", link="panda_link0")
+        sub(anchor, "origin", xyz="0 0 0.45", rpy="0 0 0")
 
     add_control(root, args.controllers)
+
+    if args.mount == "homebot":
+        # The full mobile robot is one URDF and one Gazebo physics model.
+        # The original HomeBot sensor, diff-drive and odometry plugins remain.
+        xacro_xml = subprocess.check_output(
+            ["xacro", args.homebot_xacro], stderr=subprocess.PIPE
+        )
+        homebot = ET.fromstring(xacro_xml)
+        # Preserve Panda's robot name so the official Panda SRDF remains
+        # usable by MoveIt (its active planning group is panda_arm).
+        homebot.set("name", "panda")
+        for element in list(root):
+            homebot.append(element)
+
+        mount = sub(
+            homebot, "joint", name="homebot_panda_mount", type="fixed"
+        )
+        sub(mount, "parent", link="base_link")
+        sub(mount, "child", link="panda_link0")
+        sub(mount, "origin", xyz="-0.14 0 0.18", rpy="0 0 0")
+
+        # A Panda-class arm weighs significantly more than the original
+        # 12kg demonstration chassis. Use a heavier prototype chassis here;
+        # its stability is still subject to real Gazebo tests.
+        chassis = homebot.find("./link[@name='base_link']")
+        chassis.find("./inertial/mass").set("value", "28.0")
+        chassis.find("./inertial/inertia").set("ixx", "0.48")
+        chassis.find("./inertial/inertia").set("iyy", "0.65")
+        chassis.find("./inertial/inertia").set("izz", "0.75")
+
+        root = homebot
+        tree = ET.ElementTree(root)
 
     target = Path(args.output)
     target.parent.mkdir(parents=True, exist_ok=True)
