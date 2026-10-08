@@ -188,7 +188,7 @@ def main():
     root = tree.getroot()
     root.attrib.pop("{http://www.ros.org/wiki/xacro}unused", None)
 
-    for index in range(8):
+    # Resolve Panda visual meshes to absolute paths for Gazebo Classic\n    # GUI; model:// references otherwise appear blank in an isolated viewer.\n    for mesh in root.findall(".//visual//mesh"):\n        uri = mesh.attrib.get("filename", "")\n        prefix = "package://moveit_resources_panda_description/"\n        if uri.startswith(prefix):\n            mesh.set("filename", "/opt/ros/humble/share/moveit_resources_panda_description/" + uri[len(prefix):])\n\n    for index in range(8):
         link = root.find(f"./link[@name='panda_link{index}']")
         if link is None:
             raise ValueError(f"missing panda_link{index}")
