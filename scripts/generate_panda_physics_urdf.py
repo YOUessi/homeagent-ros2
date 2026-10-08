@@ -275,6 +275,27 @@ def main():
         root = homebot
         tree = ET.ElementTree(root)
 
+    # Gazebo-side grasp is gated by two distinct physical finger contacts.
+    # It is a fixed-constraint simulation grasp, NOT a friction-only grasp.
+    if args.mount == "homebot":
+        grasp_gz = sub(root, "gazebo")
+        grasp = sub(
+            grasp_gz, "plugin", name="panda_bilateral_contact_grasp",
+            filename="libhomeagent_contact_grasp_plugin.so",
+        )
+        for key, value in (
+            ("target_model", "panda_grasp_cup"),
+            ("target_link", "link"),
+            ("attach_link", "panda_hand"),
+            ("fixed_finger_token", "panda_leftfinger"),
+            ("moving_finger_token", "panda_rightfinger"),
+            ("gripper_joint", "panda_finger_joint1"),
+            ("close_threshold", "0.012"),
+            ("open_threshold", "0.030"),
+            ("contact_window_sec", "0.5"),
+        ):
+            sub(grasp, key).text = value
+
     target = Path(args.output)
     target.parent.mkdir(parents=True, exist_ok=True)
     ET.indent(tree, space="  ")
