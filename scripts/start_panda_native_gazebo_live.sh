@@ -11,6 +11,7 @@ cat > artifacts/gazebo_models/panda_visual/model.config <<'XML'
 XML
 printf '<sdf version="1.6"><model name="panda_visual"><static>true</static><link name="link"/></model></sdf>\n' > artifacts/gazebo_models/panda_visual/model.sdf
 ln -sfn /opt/ros/humble/share/moveit_resources_panda_description/meshes/visual artifacts/gazebo_models/panda_visual/meshes/visual
+ln -sfn /opt/ros/humble/share/moveit_resources_panda_description/meshes/collision artifacts/gazebo_models/panda_visual/meshes/collision
 docker image inspect homeagent-ros2:panda-visual >/dev/null
 docker rm -f homeagent-panda-live homeagent-panda-3d >/dev/null 2>&1 || true
 docker run -d --name homeagent-panda-live --network host --ipc host \
