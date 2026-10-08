@@ -286,7 +286,7 @@ def main():
         for key, value in (
             ("target_model", "panda_grasp_cup"),
             ("target_link", "link"),
-            ("attach_link", "panda_hand"),
+            ("attach_link", "panda_leftfinger"),
             ("fixed_finger_token", "panda_leftfinger"),
             ("moving_finger_token", "panda_rightfinger"),
             ("gripper_joint", "panda_finger_joint1"),
