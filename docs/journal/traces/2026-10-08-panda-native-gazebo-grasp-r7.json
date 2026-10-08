@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-08",
+  "host": "Tang",
+  "branch": "feature/panda-gazebo-physics-20261008",
+  "commit_at_test": "0069810bf67936b2633a50836ee90169b103e45a",
+  "gazebo": "Gazebo Classic 11",
+  "robot": "homebot_panda",
+  "simulation": "GazeboSystem physical joint control",
+  "visualization": {
+    "url": "http://100.84.167.3:6082/vnc.html?autoconnect=true&resize=remote",
+    "master": "http://127.0.0.1:11380",
+    "verified": [
+      "web HTTP 200",
+      "gzclient connected to 11380",
+      "homeagent-panda-live container up",
+      "homeagent-panda-3d container up"
+    ],
+    "scope": "Tailscale-only HTTP noVNC"
+  },
+  "grasp": {
+    "mechanism": "bilateral physical Gazebo finger contact then Gazebo fixed constraint",
+    "target": "panda_grasp_cup",
+    "source_fixture": "gravity disabled only during object placement",
+    "on_contact_gravity_enabled": true,
+    "plugin_events": [
+      "gravity enabled on attached target",
+      "ATTACHED after bilateral contact",
+      "DETACHED"
+    ],
+    "arm": {
+      "planner": "MoveIt2",
+      "trajectory_points": 15,
+      "success": true
+    },
+    "gripper": {
+      "open_m": 0.034999523806994864,
+      "closed_m": 0.00499806840030786,
+      "released_m": 0.034998005543208914
+    },
+    "cup_world_displacement_m": 0.22798509869954678,
+    "cup_relative_finger_drift_m": 0.02512998870389013,
+    "cup_height_after_carry_m": 0.8826055512460594,
+    "cup_height_after_release_m": 0.25204983332426417,
+    "passed": true
+  },
+  "limitations": [
+    "Object positioned with scripted known pose; no autonomous object localization",
+    "Grasp maintained with a fixed constraint, not friction-only contact grasp",
+    "Single staged object shape and trajectory; robustness on unstructured objects untested"
+  ],
+  "failed_runs": [
+    {
+      "run": 1,
+      "issue": "unsupported SpawnEntity link reference frame"
+    },
+    {
+      "run": 2,
+      "issue": "GetEntityState used for links rather than model entities"
+    },
+    {
+      "run": 3,
+      "issue": "GetLinkState service unavailable"
+    },
+    {
+      "run": 4,
+      "issue": "panda_hand fixed link reduced by Gazebo; used left finger link_states"
+    },
+    {
+      "run": 5,
+      "issue": "SetLinkProperties ROS service unavailable"
+    },
+    {
+      "run": 6,
+      "issue": "gravity configuration not parsed reliably as boolean"
+    }
+  ],
+  "latest_run": 7
+}
