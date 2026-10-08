@@ -1,0 +1,10 @@
+FROM homeagent-ros2:visual
+
+# Official ROS 2 Humble Franka Panda CAD meshes / robot description /
+# MoveIt 2 example configuration (the previous HomeArm boxes are not used).
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ros-humble-franka-description \
+      ros-humble-moveit-resources-panda-description \
+      ros-humble-moveit-resources-panda-moveit-config \
+    && rm -rf /var/lib/apt/lists/*

@@ -126,3 +126,14 @@ DeepSeek 节点只读取环境变量 `DEEPSEEK_API_KEY`，密钥不会进入代�
 ### 当前最完整物理联合 Demo
 
 运行 `./scripts/demo_physical_mobile_manipulator.sh`。同一 Gazebo 组合机器人依次执行“去客厅”和“拿起水杯”：Nav2 使用 Household Memory 的可信房间坐标完成真实移动；操作阶段使用 Object Memory 的可信目标、GazeboSystem 关节动力学与双指 contact gate 完成 carry。仍明确标记为非纯摩擦、非自主桌面获取。
+
+
+## 三维机器人演示（2026-10-08，开发分支）
+
+**请勿混淆二维监控页、Gazebo 物理世界和 RViz 机械臂运动演示。**
+
+- 原生 **Gazebo Classic 3D**：运行 `./scripts/start_gazebo_3d_view.sh`，使用 Xvfb + noVNC 在浏览器中查看真实 Gazebo 3D 场景（沿用已运行的 HomeBot/HomeArm Gazebo gzserver）。[现场截图](docs/images/gazebo_native_20261008.png)。当前自制 HomeArm 只有四个转动关节，外形为 primitive geometry，不能代表工业机械臂外观。
+- 官方 **Franka Panda 7-DOF**：先构建 `docker/Dockerfile.visual` 与 `docker/Dockerfile.panda` 所对应镜像，再运行 `./scripts/start_panda_3d_demo.sh` 启动隔离的 RViz + MoveIt2 + ros2_control `mock_components` demo。浏览器连接地址由脚本打印；[真实 CAD Mesh 截图](docs/images/panda_rviz_20261008.png)。
+- Panda 的关节运动与夹爪开合可用 `docker exec homeagent-panda-demo bash -lc 'source /opt/ros/humble/setup.bash && python3 /workspace/scripts/panda_moveit_joint_demo.py'` 演示，MoveIt2 两次 15-point 规划执行及 gripper action 已实测通过。
+
+**验证边界**：Panda 当前是官方七轴网格 + MoveIt2 模拟关节控制，**尚未接入 GazeboSystem 物理关节和真实接触抓取**；原有 HomeArm Gazebo 物理控制与 Agent E2E 是另一套结构。替换模型必须单独验证控制器接口、Gazebo、Safety 和抓取，不可凭 RViz 画面宣称整个系统完成。

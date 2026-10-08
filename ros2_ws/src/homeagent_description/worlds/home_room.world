@@ -1,6 +1,13 @@
 <?xml version="1.0"?>
 <sdf version="1.6">
   <world name="home_room">
+    <!-- Native Gazebo Classic 3D overview, not a 2D occupancy-grid overlay. -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>-2.0 -2.0 4.2 0 0.94 0.79</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
     <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
       <ros>
         <namespace>/gazebo</namespace>
